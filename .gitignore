@@ -1,0 +1,23 @@
+# Backend (Python/Flask)
+backend/__pycache__/
+backend/.pytest_cache/
+backend/.venv/
+backend/venv/
+backend/env/
+backend/instance/
+backend/.env
+
+# Frontend (Vue)
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# Local noise
+.DS_Store
+Thumbs.db
+alembic.ini
+migrations/
+
+# Keep sample env files
+!backend/.env.example
+!frontend/.env.example

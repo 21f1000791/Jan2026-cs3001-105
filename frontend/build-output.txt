@@ -1,0 +1,54 @@
+
+> vue@0.1.0 build
+> vue-cli-service build
+
+
+-  Building legacy bundle for production...
+ DONE  Compiled successfully in 9594ms3:50:26 am
+
+  File                                      Size             Gzipped
+
+  dist\js\896-legacy.f3177e38.js            162.31 KiB       55.95 KiB
+  dist\js\chunk-vendors-legacy.3ac3d75b.    106.90 KiB       39.02 KiB
+  js
+  dist\js\138-legacy.008a4bb0.js            38.10 KiB        14.75 KiB
+  dist\js\129-legacy.0dfe85fe.js            13.41 KiB        3.93 KiB
+  dist\js\507-legacy.d1c1f5ec.js            10.63 KiB        3.21 KiB
+  dist\js\app-legacy.6420d79a.js            5.75 KiB         2.52 KiB
+  dist\js\968-legacy.77a7a467.js            3.85 KiB         1.57 KiB
+  dist\js\44-legacy.0699ed40.js             3.76 KiB         1.73 KiB
+  dist\css\129.c38b4b91.css                 18.67 KiB        3.08 KiB
+  dist\css\44.f006fb29.css                  12.32 KiB        2.37 KiB
+  dist\css\896.930f6dd4.css                 7.62 KiB         1.58 KiB
+  dist\css\968.e7f46817.css                 3.46 KiB         0.96 KiB
+  dist\css\app.f69f6b91.css                 0.97 KiB         0.43 KiB
+
+  Images and other types of assets omitted.
+  Build at: 2026-03-18T22:20:26.270Z - Hash: d3696b9e905b95ad - Time: 9594ms
+
+
+-  Building module bundle for production...
+ DONE  Compiled successfully in 10207ms3:50:39 am
+
+  File                                 Size               Gzipped
+
+  dist\js\896.f3177e38.js              162.31 KiB         55.94 KiB
+  dist\js\chunk-vendors.3ac3d75b.js    106.89 KiB         39.01 KiB
+  dist\js\138.008a4bb0.js              38.10 KiB          14.75 KiB
+  dist\js\129.0dfe85fe.js              13.40 KiB          3.92 KiB
+  dist\js\507.d1c1f5ec.js              10.63 KiB          3.20 KiB
+  dist\js\app.9e1a3278.js              5.73 KiB           2.51 KiB
+  dist\js\968.77a7a467.js              3.85 KiB           1.57 KiB
+  dist\js\44.0699ed40.js               3.75 KiB           1.73 KiB
+  dist\css\129.c38b4b91.css            18.67 KiB          3.08 KiB
+  dist\css\44.f006fb29.css             12.32 KiB          2.37 KiB
+  dist\css\896.930f6dd4.css            7.62 KiB           1.58 KiB
+  dist\css\968.e7f46817.css            3.46 KiB           0.96 KiB
+  dist\css\app.f69f6b91.css            0.97 KiB           0.43 KiB
+
+  Images and other types of assets omitted.
+  Build at: 2026-03-18T22:20:39.546Z - Hash: 257c3c3533ae426d - Time: 10207ms
+
+ DONE  Build complete. The dist directory is ready to be deployed.
+ INFO  Check out deployment instructions at https://cli.vuejs.org/guide/deployment.html
+       

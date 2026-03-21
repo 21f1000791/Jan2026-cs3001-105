@@ -1,0 +1,45 @@
+:root {
+  --bg-main: linear-gradient(135deg, #f4f7f6 0%, #f3f6fd 100%);
+  --surface: rgba(255, 255, 255, 0.9);
+  --text-main: #1f2937;
+  --text-soft: #6b7280;
+}
+
+html.dark {
+  --bg-main: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  --surface: rgba(31, 41, 55, 0.86);
+  --text-main: #f3f4f6;
+  --text-soft: #d1d5db;
+}
+
+body {
+  margin: 0;
+  font-family: "Poppins", "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg-main);
+  color: var(--text-main);
+}
+
+.glass-panel {
+  background: var(--surface);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.15);
+}
+
+.soft-text {
+  color: var(--text-soft);
+}
+
+@keyframes floatIn {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
