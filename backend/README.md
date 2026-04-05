@@ -36,9 +36,15 @@ Optional: wipe existing records first, then reseed:
 python seed_db.py --wipe
 ```
 
+Optional: recreate a fresh SQLite DB instance and seed from scratch:
+
+```bash
+python seed_db.py --reset-db --wipe
+```
+
 Default seed accounts:
 
-- admin: `admin@communityops.local` / `password123`
+- admin: `admin@gmail.com` / `admin`
 - manager: `manager@communityops.local` / `password123`
 - staff: `staff.one@communityops.local` / `password123`
 - staff: `staff.two@communityops.local` / `password123`

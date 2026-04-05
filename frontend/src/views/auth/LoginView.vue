@@ -31,7 +31,9 @@ const submit = async () => {
     const data = await authService.login({ email: email.value, password: password.value });
     localStorage.setItem("auth_token", data.token);
     localStorage.setItem("user_role", data.role || "staff");
-    if (data.role === "manager" || data.role === "admin") {
+    if (data.role === "admin") {
+      router.push("/admin/dashboard");
+    } else if (data.role === "manager") {
       router.push("/manager/dashboard");
     } else {
       router.push("/staff/tasks");
@@ -133,7 +135,7 @@ const submit = async () => {
           </button>
         </form>
 
-        <p class="login-panel__hint">Demo manager login: admin@gmail.com / password</p>
+        <p class="login-panel__hint">System admin login: admin@gmail.com / admin</p>
       </section>
     </div>
   </div>

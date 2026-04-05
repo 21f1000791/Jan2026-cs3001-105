@@ -31,7 +31,7 @@ def test_task_relationships_and_translation_unique(app):
         task = Task(
             title="Prepare inventory report",
             description="Collect stock data and submit report",
-            category="operations",
+            category="Construction",
             due_date=utc_now() + timedelta(days=2),
             priority="high",
             status="todo",
@@ -70,7 +70,7 @@ def test_task_soft_delete_and_restore(app):
         task = Task(
             title="Archive file room",
             description="Mark old files for archive",
-            category="admin",
+            category="Maintenance",
             priority="medium",
             status="todo",
             created_by=manager.id,

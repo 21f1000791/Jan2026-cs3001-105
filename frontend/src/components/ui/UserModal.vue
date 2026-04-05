@@ -10,6 +10,14 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  allowAdminRole: {
+    type: Boolean,
+    default: false,
+  },
+  allowManagerRole: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits(["close", "submit"]);
@@ -69,7 +77,8 @@ const submit = () => {
           <input v-model="form.email" type="email" required placeholder="Email" class="user-modal__field" />
           <select v-model="form.role" class="user-modal__field">
             <option value="staff">Staff</option>
-            <option value="manager">Manager</option>
+            <option v-if="props.allowManagerRole" value="manager">Manager</option>
+            <option v-if="props.allowAdminRole" value="admin">Admin</option>
           </select>
           <input
             v-model="form.password"

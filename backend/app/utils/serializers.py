@@ -1,13 +1,19 @@
 from app.models import Notification, Task, TaskStatusHistory, Translation, User
+from app.services.task_service import TaskService
 
 
 def serialize_user(user: User):
+    manager_categories = []
+    if user.role == "manager":
+        manager_categories = TaskService.get_manager_categories(user.id)
+
     return {
         "id": user.id,
         "name": user.name,
         "email": user.email,
         "role": user.role,
         "is_active": user.is_active,
+        "categories": manager_categories,
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "updated_at": user.updated_at.isoformat() if user.updated_at else None,
     }

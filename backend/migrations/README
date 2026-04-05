@@ -1,0 +1,9 @@
+Single-database Alembic setup for Flask-Migrate.
+
+Generate future revisions with:
+
+  flask db migrate -m "message"
+
+Apply migrations with:
+
+  flask db upgrade

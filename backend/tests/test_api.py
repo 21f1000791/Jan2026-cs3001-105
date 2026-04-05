@@ -50,13 +50,16 @@ def test_task_creation_by_manager(client, app):
     with app.app_context():
         manager = _create_user("Manager", "task.manager@cop.local", "manager")
         staff = _create_user("Staff", "task.staff@cop.local", "staff")
+        manager.set_managed_categories(["Construction"])
+        db.session.add(manager)
+        db.session.commit()
 
         token = _login(client, manager.email)
 
         payload = {
             "title": "Prepare weekly ledger",
             "description": "Compile all invoices and ledger entries.",
-            "category": "finance",
+            "category": "Construction",
             "priority": "high",
             "status": "todo",
             "assigned_to": staff.id,
@@ -84,7 +87,7 @@ def test_staff_status_update_records_history(client, app):
         task = Task(
             title="Close support tickets",
             description="Resolve assigned tickets",
-            category="support",
+            category="Maintenance",
             priority="medium",
             status="todo",
             assigned_to=staff.id,
@@ -131,3 +134,51 @@ def test_notifications_list_and_read(client, app):
 
         db.session.refresh(note)
         assert note.is_read is True
+
+
+def test_manager_cannot_create_task_outside_assigned_categories(client, app):
+    with app.app_context():
+        manager = _create_user("Manager3", "manager3@cop.local", "manager")
+        staff = _create_user("Staff4", "staff4@cop.local", "staff")
+        manager.set_managed_categories(["Maintenance"])
+        db.session.add(manager)
+        db.session.commit()
+
+        token = _login(client, manager.email)
+
+        response = client.post(
+            "/api/tasks",
+            json={
+                "title": "Unauthorized category task",
+                "description": "Should fail",
+                "category": "Construction",
+                "priority": "high",
+                "status": "todo",
+                "assigned_to": staff.id,
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 403
+
+
+def test_admin_can_assign_manager_categories(client, app):
+    with app.app_context():
+        manager = _create_user("Manager4", "manager4@cop.local", "manager")
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin", "password": "admin"},
+        )
+        assert login_response.status_code == 200
+        token = login_response.get_json()["access_token"]
+
+        response = client.put(
+            f"/api/users/{manager.id}/categories",
+            json={"categories": ["Maintenance", "Construction"]},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 200
+
+        db.session.refresh(manager)
+        categories = manager.get_managed_categories()
+        assert set(categories) == {"Maintenance", "Construction"}

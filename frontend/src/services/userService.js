@@ -6,6 +6,7 @@ const normalizeUser = (item = {}) => ({
   email: item.email || "",
   role: (item.role || "staff").toLowerCase(),
   active: item.is_active ?? item.active ?? true,
+  categories: item.categories || [],
 });
 
 export const userService = {
@@ -18,6 +19,27 @@ export const userService = {
     const response = await apiClient.get("/users");
     const users = response.data?.items || response.data || [];
     return users.map(normalizeUser);
+  },
+
+  async getCategoryCatalog() {
+    const response = await apiClient.get("/users/categories");
+    return {
+      allCategories: response.data?.all_categories || [],
+      allowedCategories: response.data?.allowed_categories || [],
+    };
+  },
+
+  async getManagerCategoryMatrix() {
+    const response = await apiClient.get("/users/manager-categories");
+    return {
+      categories: response.data?.categories || [],
+      managers: (response.data?.items || []).map(normalizeUser),
+    };
+  },
+
+  async setManagerCategories(userId, categories) {
+    const response = await apiClient.put(`/users/${userId}/categories`, { categories });
+    return normalizeUser(response.data?.manager || response.data || { id: userId, categories });
   },
 
   async create(payload) {

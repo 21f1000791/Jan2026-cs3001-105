@@ -15,7 +15,7 @@ import { notificationService } from "../../services/notificationService";
 
 const router = useRouter();
 
-const currentUser = ref({ name: "Manager", role: "manager" });
+const currentUser = ref({ name: "", role: "manager", categories: [] });
 const notifications = ref([]);
 const notificationOpen = ref(false);
 const darkMode = ref(localStorage.getItem("ui_theme") === "dark");
@@ -38,6 +38,9 @@ const users = ref([]);
 const userSearch = ref("");
 const showUserModal = ref(false);
 const editingUser = ref(null);
+const categoryCatalog = ref({ allCategories: [], allowedCategories: [] });
+const managerCategoryState = ref({ categories: [], managers: [] });
+const loadingManagerCategories = ref(false);
 
 const toasts = ref([]);
 const pushToast = (message, type = "info") => {
@@ -51,6 +54,15 @@ const pushToast = (message, type = "info") => {
 const staffUsers = computed(() =>
   users.value.filter((user) => user.role === "staff" && user.active)
 );
+
+const isAdmin = computed(() => currentUser.value.role === "admin");
+
+const taskCategoryOptions = computed(() => {
+  if (isAdmin.value) {
+    return categoryCatalog.value.allCategories;
+  }
+  return categoryCatalog.value.allowedCategories;
+});
 
 const filteredTasks = computed(() => {
   const query = taskSearch.value.trim().toLowerCase();
@@ -93,6 +105,37 @@ const loadTasks = async () => {
   }
 };
 
+const loadCurrentUser = async () => {
+  try {
+    currentUser.value = await userService.getMe();
+  } catch (error) {
+    pushToast(error.message || "Could not load profile.", "error");
+  }
+};
+
+const loadCategoryCatalog = async () => {
+  try {
+    categoryCatalog.value = await taskService.getCategoryCatalog();
+  } catch (error) {
+    pushToast(error.message || "Could not load categories.", "error");
+  }
+};
+
+const loadManagerCategoryMatrix = async () => {
+  if (!isAdmin.value) {
+    return;
+  }
+
+  loadingManagerCategories.value = true;
+  try {
+    managerCategoryState.value = await userService.getManagerCategoryMatrix();
+  } catch (error) {
+    pushToast(error.message || "Could not load manager jurisdictions.", "error");
+  } finally {
+    loadingManagerCategories.value = false;
+  }
+};
+
 const loadUsers = async () => {
   loadingUsers.value = true;
   try {
@@ -113,6 +156,10 @@ const loadNotifications = async () => {
 };
 
 const openCreateTask = () => {
+    if (!taskCategoryOptions.value.length) {
+      pushToast("No categories are available for your account.", "error");
+      return;
+    }
     editingTask.value = null;
     showTaskModal.value = true;
 };
@@ -193,6 +240,11 @@ const toggleUserStatus = async (user) => {
 };
 
 const hardDeleteUser = async (user) => {
+  if (!isAdmin.value) {
+    pushToast("Only admin can hard delete users.", "error");
+    return;
+  }
+
   if (!window.confirm(`Permanently delete ${user.name}? This cannot be undone.`)) {
     return;
   }
@@ -203,6 +255,21 @@ const hardDeleteUser = async (user) => {
     await loadUsers();
   } catch (error) {
     pushToast(error.message || "Hard delete endpoint is unavailable.", "error");
+  }
+};
+
+const toggleManagerCategory = async (manager, category) => {
+  const hasCategory = (manager.categories || []).includes(category);
+  const nextCategories = hasCategory
+    ? (manager.categories || []).filter((item) => item !== category)
+    : [...(manager.categories || []), category];
+
+  try {
+    await userService.setManagerCategories(manager.id, nextCategories);
+    await loadManagerCategoryMatrix();
+    pushToast("Manager jurisdiction updated.", "success");
+  } catch (error) {
+    pushToast(error.message || "Failed to update manager jurisdiction.", "error");
   }
 };
 
@@ -236,7 +303,9 @@ const logout = async () => {
 
 onMounted(async () => {
   document.documentElement.classList.toggle("dark", darkMode.value);
-  await Promise.all([loadTasks(), loadUsers(), loadNotifications()]);
+  await loadCurrentUser();
+  await Promise.all([loadCategoryCatalog(), loadTasks(), loadUsers(), loadNotifications()]);
+  await loadManagerCategoryMatrix();
 });
 </script>
 
@@ -244,7 +313,7 @@ onMounted(async () => {
   <div class="manager-page">
     <div class="manager-shell">
       <AppNavbar
-        title="Manager Portal"
+        :title="isAdmin ? 'Admin Portal' : 'Manager Portal'"
         :subtitle="`Welcome, ${currentUser.name}`"
         :notifications="notifications"
         :notification-open="notificationOpen"
@@ -362,6 +431,7 @@ onMounted(async () => {
                           {{ user.active ? "Deactivate" : "Activate" }}
                         </button>
                         <button
+                          v-if="isAdmin"
                           @click="hardDeleteUser(user)"
                           class="manager-action manager-action--delete"
                         >
@@ -377,6 +447,60 @@ onMounted(async () => {
                 </tbody>
               </table>
             </div>
+
+            <div v-if="isAdmin" class="manager-users-table-wrap glass-panel">
+              <h2 class="manager-users-title">Manager Category Jurisdiction</h2>
+              <table class="manager-users-table">
+                <thead>
+                  <tr class="manager-users-head-row">
+                    <th class="manager-users-cell">Manager</th>
+                    <th
+                      v-for="category in managerCategoryState.categories"
+                      :key="category"
+                      class="manager-users-cell"
+                    >
+                      {{ category }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="loadingManagerCategories">
+                    <td :colspan="managerCategoryState.categories.length + 1" class="manager-users-empty">
+                      Loading manager jurisdictions...
+                    </td>
+                  </tr>
+
+                  <tr
+                    v-for="manager in managerCategoryState.managers"
+                    v-else
+                    :key="manager.id"
+                    class="manager-users-row"
+                  >
+                    <td class="manager-users-cell">{{ manager.name }}</td>
+                    <td
+                      v-for="category in managerCategoryState.categories"
+                      :key="`${manager.id}-${category}`"
+                      class="manager-users-cell"
+                    >
+                      <label class="manager-category-check-wrap">
+                        <input
+                          type="checkbox"
+                          class="manager-category-check"
+                          :checked="(manager.categories || []).includes(category)"
+                          @change="toggleManagerCategory(manager, category)"
+                        />
+                      </label>
+                    </td>
+                  </tr>
+
+                  <tr v-if="!loadingManagerCategories && managerCategoryState.managers.length === 0">
+                    <td :colspan="managerCategoryState.categories.length + 1" class="manager-users-empty">
+                      No manager users found.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
       </div>
@@ -386,6 +510,7 @@ onMounted(async () => {
       :open="showTaskModal"
       :editing-task="editingTask"
       :users="staffUsers"
+      :categories="taskCategoryOptions"
       @close="showTaskModal = false"
       @submit="saveTask"
     />
@@ -393,6 +518,8 @@ onMounted(async () => {
     <UserModal
       :open="showUserModal"
       :editing-user="editingUser"
+      :allow-admin-role="isAdmin"
+      :allow-manager-role="isAdmin"
       @close="showUserModal = false"
       @submit="saveUser"
     />
@@ -586,6 +713,17 @@ onMounted(async () => {
   padding: 1.5rem 0;
   text-align: center;
   color: #64748b;
+}
+
+.manager-category-check-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.manager-category-check {
+  width: 1rem;
+  height: 1rem;
 }
 
 :global(html.dark) .manager-input {

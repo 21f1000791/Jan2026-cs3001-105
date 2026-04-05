@@ -16,14 +16,14 @@ class RegisterResource(Resource):
 
 		if not name or not email or not password:
 			return {"message": "name, email, and password are required."}, 400
-		if role not in {"manager", "staff", "admin"}:
+		if role not in {"manager", "staff"}:
 			return {"message": "Invalid role."}, 400
 
 		user, error = AuthService.register_user(name=name, email=email, password=password, role=role)
 		if error:
 			return {"message": error}, 409
 
-		logged_in_user, token, _ = AuthService.login_user(email=email, password=password)
+		logged_in_user, token, _ = AuthService.login_user(identifier=email, password=password)
 		return {
 			"message": "Registration successful.",
 			"access_token": token,
@@ -34,13 +34,13 @@ class RegisterResource(Resource):
 class LoginResource(Resource):
 	def post(self):
 		payload = request.get_json(silent=True) or {}
-		email = (payload.get("email") or "").strip()
+		identifier = (payload.get("email") or payload.get("username") or "").strip()
 		password = payload.get("password") or ""
 
-		if not email or not password:
-			return {"message": "email and password are required."}, 400
+		if not identifier or not password:
+			return {"message": "username/email and password are required."}, 400
 
-		user, token, error = AuthService.login_user(email=email, password=password)
+		user, token, error = AuthService.login_user(identifier=identifier, password=password)
 		if error:
 			return {"message": error}, 401
 

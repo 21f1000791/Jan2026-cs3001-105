@@ -104,7 +104,7 @@ status, body = call(
     {
         "title": "Integration smoke task",
         "description": "verify API integration",
-        "category": "Development",
+        "category": "Maintenance",
         "priority": "high",
         "status": "todo",
         "assigned_to": manager_user_id,

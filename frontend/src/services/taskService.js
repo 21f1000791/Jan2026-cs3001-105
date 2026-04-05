@@ -37,14 +37,14 @@ const toDescriptionMap = (description) => {
 
 const normalizeTask = (task = {}) => ({
   id: task.id,
-  title: task.title || "Untitled",
+  title: task.translated_title || task.title || "Untitled",
   assignedTo:
     task.assignedTo ||
     task.assigned_to_name ||
     task.assigned_user?.name ||
     task.assigned_to ||
     "Unassigned",
-  category: task.category || "General",
+  category: task.translated_category || task.category || "Maintenance",
   priority: task.priority || "Medium",
   status: API_TO_UI_STATUS[task.status] || task.status || "Pending",
   dueDate: task.dueDate || task.due_date || "",
@@ -68,14 +68,24 @@ const apiPayloadFromTask = (payload = {}) => ({
 });
 
 export const taskService = {
+  async getCategoryCatalog() {
+    const response = await apiClient.get("/users/categories");
+    return {
+      allCategories: response.data?.all_categories || [],
+      allowedCategories: response.data?.allowed_categories || [],
+    };
+  },
+
   async getAll() {
     const response = await apiClient.get("/tasks");
     const tasks = response.data?.items || response.data || [];
     return tasks.map(normalizeTask);
   },
 
-  async getAssigned() {
-    const response = await apiClient.get("/tasks/assigned");
+  async getAssigned(language = "en") {
+    const response = await apiClient.get("/tasks/assigned", {
+      params: { lang: language },
+    });
     const tasks = response.data?.items || response.data || [];
     return tasks.map(normalizeTask);
   },

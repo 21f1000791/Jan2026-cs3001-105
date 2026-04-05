@@ -14,6 +14,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  categories: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const emit = defineEmits(["close", "submit"]);
@@ -21,7 +25,7 @@ const emit = defineEmits(["close", "submit"]);
 const form = reactive({
   title: "",
   assignedTo: "",
-  category: "Development",
+  category: "Maintenance",
   priority: "Medium",
   dueDate: "",
   description: { en: "", hi: "", kn: "" },
@@ -33,7 +37,7 @@ watch(
     if (!task) {
       form.title = "";
       form.assignedTo = "";
-      form.category = "Development";
+      form.category = props.categories[0] || "Maintenance";
       form.priority = "Medium";
       form.dueDate = "";
       form.description = { en: "", hi: "", kn: "" };
@@ -41,12 +45,26 @@ watch(
     }
     form.title = task.title || "";
     form.assignedTo = task.assignedTo || "";
-    form.category = task.category || "Development";
+    form.category = task.category || props.categories[0] || "Maintenance";
     form.priority = task.priority || "Medium";
     form.dueDate = task.dueDate || "";
     form.description = task.description
       ? { ...task.description }
       : { en: "", hi: "", kn: "" };
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.categories,
+  (nextCategories) => {
+    if (!Array.isArray(nextCategories) || nextCategories.length === 0) {
+      return;
+    }
+
+    if (!nextCategories.includes(form.category)) {
+      form.category = nextCategories[0];
+    }
   },
   { immediate: true }
 );
@@ -78,6 +96,10 @@ const submit = () => {
             <select v-model="form.assignedTo" required class="task-modal__field">
               <option disabled value="">Assign to</option>
               <option v-for="user in props.users" :key="user.id" :value="user.id">{{ user.name }}</option>
+            </select>
+            <select v-model="form.category" required class="task-modal__field">
+              <option disabled value="">Select category</option>
+              <option v-for="category in props.categories" :key="category" :value="category">{{ category }}</option>
             </select>
             <input v-model="form.dueDate" type="date" required class="task-modal__field" />
             <select v-model="form.priority" class="task-modal__field">

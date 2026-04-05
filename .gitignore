@@ -17,7 +17,12 @@ frontend/.env
 Thumbs.db
 alembic.ini
 migrations/
+!backend/migrations/
+!backend/migrations/**
 
 # Keep sample env files
 !backend/.env.example
 !frontend/.env.example
+
+
+backend/app/models/__pycache__/manager_category_assignment.cpython-313.pyc

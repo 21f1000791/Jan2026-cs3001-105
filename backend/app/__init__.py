@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 from flask import Flask
 from flask_cors import CORS
 
-from app.config import CONFIG_MAP
 from app.extensions import db, jwt, migrate
 from app.models.token_blocklist import TokenBlocklist
 
@@ -19,6 +18,8 @@ def is_token_revoked(_jwt_header, jwt_payload):
 
 def create_app(config_name=None):
     load_dotenv()
+    from app.config import CONFIG_MAP
+
     app = Flask(__name__)
 
     selected_config = config_name or os.getenv("FLASK_CONFIG", "development")

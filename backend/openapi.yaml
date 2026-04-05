@@ -1,0 +1,1275 @@
+openapi: 3.0.3
+info:
+  title: Community Operations Platform API
+  version: 1.0.0
+  description: |
+    REST API for authentication, user management, task operations, notifications,
+    dashboards, exports, search, and UI translation.
+servers:
+  - url: http://127.0.0.1:5000/api
+    description: Local development
+
+tags:
+  - name: Health
+  - name: Auth
+  - name: Users
+  - name: Tasks
+  - name: Notifications
+  - name: Dashboard
+  - name: Search
+  - name: Export
+  - name: Translation
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: community-ops-backend
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a manager/staff user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Registration conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with username or email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginSuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout current session
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get current user profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Users list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Users]
+      summary: Create user (manager/admin restricted)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Email conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /users/{user_id}:
+    parameters:
+      - $ref: '#/components/parameters/UserIdPath'
+    put:
+      tags: [Users]
+      summary: Update user
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Email conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+    patch:
+      tags: [Users]
+      summary: Partial update user (same behavior as PUT)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Email conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /users/{user_id}/terminate:
+    parameters:
+      - $ref: '#/components/parameters/UserIdPath'
+    put:
+      tags: [Users]
+      summary: Deactivate user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User deactivated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /users/{user_id}/activate:
+    parameters:
+      - $ref: '#/components/parameters/UserIdPath'
+    put:
+      tags: [Users]
+      summary: Activate user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User activated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /users/{user_id}/hard:
+    parameters:
+      - $ref: '#/components/parameters/UserIdPath'
+    delete:
+      tags: [Users]
+      summary: Hard delete user (admin only)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /users/categories:
+    get:
+      tags: [Users]
+      summary: Get task category catalog and current user allowed categories
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Category catalog
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoriesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /users/manager-categories:
+    get:
+      tags: [Users]
+      summary: List managers with category matrix (admin only)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Managers and available categories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  categories:
+                    type: array
+                    items:
+                      type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /users/{user_id}/categories:
+    parameters:
+      - $ref: '#/components/parameters/UserIdPath'
+    put:
+      tags: [Users]
+      summary: Assign manager categories (admin only)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [categories]
+              properties:
+                categories:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Manager categories updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  manager:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tasks:
+    get:
+      tags: [Tasks]
+      summary: List tasks for manager/admin scope
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: include_deleted
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Task list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTasksResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Tasks]
+      summary: Create task (manager/admin)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: Task created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  task:
+                    $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /tasks/all:
+    get:
+      tags: [Tasks]
+      summary: Alias of GET /tasks
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: include_deleted
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Task list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTasksResponse'
+
+  /tasks/{task_id}:
+    parameters:
+      - $ref: '#/components/parameters/TaskIdPath'
+    get:
+      tags: [Tasks]
+      summary: Get task details
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task:
+                    $ref: '#/components/schemas/Task'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Tasks]
+      summary: Update task
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  task:
+                    $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Tasks]
+      summary: Delete task
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Task deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tasks/{task_id}/hard:
+    parameters:
+      - $ref: '#/components/parameters/TaskIdPath'
+    delete:
+      tags: [Tasks]
+      summary: Hard delete task (admin only)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Task deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tasks/assigned:
+    get:
+      tags: [Tasks]
+      summary: List tasks assigned to current staff user
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - in: query
+          name: lang
+          description: Staff content language (en, hi, kn)
+          schema:
+            type: string
+            enum: [en, hi, kn]
+      responses:
+        '200':
+          description: Assigned tasks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTasksResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /tasks/my-tasks:
+    get:
+      tags: [Tasks]
+      summary: Alias of GET /tasks/assigned
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - in: query
+          name: lang
+          schema:
+            type: string
+            enum: [en, hi, kn]
+      responses:
+        '200':
+          description: Assigned tasks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTasksResponse'
+
+  /tasks/{task_id}/status:
+    parameters:
+      - $ref: '#/components/parameters/TaskIdPath'
+    patch:
+      tags: [Tasks]
+      summary: Update task status
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [todo, in_progress, blocked, completed, overdue]
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  task:
+                    $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications for current user
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Notification list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+  /notifications/unread:
+    get:
+      tags: [Notifications]
+      summary: List unread notifications for current user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Unread notifications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+
+  /notifications/{notification_id}/read:
+    parameters:
+      - in: path
+        name: notification_id
+        required: true
+        schema:
+          type: integer
+    patch:
+      tags: [Notifications]
+      summary: Mark notification as read
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Notification updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  notification:
+                    $ref: '#/components/schemas/Notification'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /dashboard/manager:
+    get:
+      tags: [Dashboard]
+      summary: Manager/admin dashboard metrics
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Metrics object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  metrics:
+                    type: object
+                    additionalProperties: true
+
+  /dashboard/staff:
+    get:
+      tags: [Dashboard]
+      summary: Staff dashboard metrics
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Metrics object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  metrics:
+                    type: object
+                    additionalProperties: true
+
+  /search/tasks:
+    get:
+      tags: [Search]
+      summary: Search tasks by text query
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedTasksResponse'
+                  - type: object
+                    properties:
+                      query:
+                        type: string
+
+  /export/tasks:
+    get:
+      tags: [Export]
+      summary: Export tasks as CSV or PDF
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: format
+          schema:
+            type: string
+            enum: [csv, pdf]
+            default: csv
+      responses:
+        '200':
+          description: Export file
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  /export/performance:
+    get:
+      tags: [Export]
+      summary: Export performance report as CSV
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  /translations/ui:
+    post:
+      tags: [Translation]
+      summary: Translate arbitrary UI text keys for selected language
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [language, texts]
+              properties:
+                language:
+                  type: string
+                  enum: [en, hi, kn]
+                texts:
+                  type: object
+                  additionalProperties:
+                    type: string
+      responses:
+        '200':
+          description: UI translation map
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  language:
+                    type: string
+                  translations:
+                    type: object
+                    additionalProperties:
+                      type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    UserIdPath:
+      in: path
+      name: user_id
+      required: true
+      schema:
+        type: integer
+    TaskIdPath:
+      in: path
+      name: task_id
+      required: true
+      schema:
+        type: integer
+    Page:
+      in: query
+      name: page
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PerPage:
+      in: query
+      name: per_page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MessageResponse'
+    Unauthorized:
+      description: Authentication required or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MessageResponse'
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MessageResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MessageResponse'
+
+  schemas:
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+
+    RegisterRequest:
+      type: object
+      required: [name, email, password, role]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        role:
+          type: string
+          enum: [manager, staff]
+
+    LoginRequest:
+      type: object
+      required: [password]
+      properties:
+        email:
+          type: string
+          description: Email or username identifier
+        username:
+          type: string
+          description: Optional username identifier
+        password:
+          type: string
+
+    AuthSuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        access_token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+
+    LoginSuccessResponse:
+      allOf:
+        - $ref: '#/components/schemas/AuthSuccessResponse'
+        - type: object
+          properties:
+            token:
+              type: string
+            role:
+              type: string
+              enum: [admin, manager, staff]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, manager, staff]
+        is_active:
+          type: boolean
+        categories:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    CreateUserRequest:
+      type: object
+      required: [name, email, password, role]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        role:
+          type: string
+          enum: [manager, staff]
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [manager, staff]
+        password:
+          type: string
+        is_active:
+          type: boolean
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          oneOf:
+            - type: string
+            - type: object
+        category:
+          type: string
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        status:
+          type: string
+          enum: [todo, in_progress, blocked, completed, overdue]
+        assigned_to:
+          type: integer
+          nullable: true
+        created_by:
+          type: integer
+        multilingual_enabled:
+          type: boolean
+        is_deleted:
+          type: boolean
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        translated_title:
+          type: string
+          nullable: true
+        translated_category:
+          type: string
+          nullable: true
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Translation'
+
+    Translation:
+      type: object
+      properties:
+        id:
+          type: integer
+        task_id:
+          type: integer
+        language:
+          type: string
+          enum: [en, hi, kn]
+        translated_text:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    CreateTaskRequest:
+      type: object
+      required: [title, category]
+      properties:
+        title:
+          type: string
+        description:
+          oneOf:
+            - type: string
+            - type: object
+              properties:
+                en:
+                  type: string
+                hi:
+                  type: string
+                kn:
+                  type: string
+        category:
+          type: string
+        due_date:
+          type: string
+          format: date-time
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        status:
+          type: string
+          enum: [todo, in_progress, blocked, completed, overdue]
+        assigned_to:
+          type: integer
+          nullable: true
+        multilingual_enabled:
+          type: boolean
+
+    UpdateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          oneOf:
+            - type: string
+            - type: object
+              properties:
+                en:
+                  type: string
+                hi:
+                  type: string
+                kn:
+                  type: string
+        category:
+          type: string
+        due_date:
+          type: string
+          format: date-time
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        status:
+          type: string
+          enum: [todo, in_progress, blocked, completed, overdue]
+        assigned_to:
+          type: integer
+          nullable: true
+        multilingual_enabled:
+          type: boolean
+        regenerate_translations:
+          type: boolean
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        message:
+          type: string
+        is_read:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+          nullable: true
+
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+        has_next:
+          type: boolean
+        has_prev:
+          type: boolean
+
+    PaginatedTasksResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    CategoriesResponse:
+      type: object
+      properties:
+        all_categories:
+          type: array
+          items:
+            type: string
+        allowed_categories:
+          type: array
+          items:
+            type: string

@@ -1,4 +1,5 @@
 from passlib.context import CryptContext
+import json
 
 from app.extensions import db
 from app.models.base import TimestampMixin
@@ -17,6 +18,7 @@ class User(TimestampMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default="staff", index=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    managed_categories = db.Column(db.Text, nullable=False, default="[]")
 
     created_tasks = db.relationship(
         "Task",
@@ -36,7 +38,6 @@ class User(TimestampMixin, db.Model):
         cascade="all, delete-orphan",
         lazy="dynamic",
     )
-
     __table_args__ = (
         db.CheckConstraint("role IN ('manager', 'staff', 'admin')", name="ck_users_role"),
     )
@@ -49,6 +50,24 @@ class User(TimestampMixin, db.Model):
 
     def check_password(self, password: str) -> bool:
         return pwd_context.verify(password, self.password_hash)
+
+    def get_managed_categories(self):
+        try:
+            raw = json.loads(self.managed_categories or "[]")
+        except (TypeError, json.JSONDecodeError):
+            raw = []
+
+        if not isinstance(raw, list):
+            return []
+        return [str(item) for item in raw]
+
+    def set_managed_categories(self, categories):
+        normalized = []
+        for category in categories or []:
+            value = str(category).strip()
+            if value and value not in normalized:
+                normalized.append(value)
+        self.managed_categories = json.dumps(normalized)
 
     def __repr__(self):
         return f"<User id={self.id} email={self.email} role={self.role}>"

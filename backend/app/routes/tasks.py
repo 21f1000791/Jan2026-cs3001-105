@@ -5,6 +5,7 @@ from flask_restful import Resource
 from app.middleware.authz import get_current_user, role_required
 from app.models import Task
 from app.services.task_service import TaskService
+from app.services.translation_service import TranslationService
 from app.utils.pagination import build_pagination_meta, parse_pagination_args
 from app.utils.serializers import serialize_task
 
@@ -13,6 +14,7 @@ class ManagerTaskListResource(Resource):
 	method_decorators = [role_required("manager", "admin")]
 
 	def get(self):
+		user = get_current_user()
 		page, per_page = parse_pagination_args(
 			request.args,
 			default_page=current_app.config["DEFAULT_PAGE"],
@@ -24,6 +26,7 @@ class ManagerTaskListResource(Resource):
 			"category": request.args.get("category"),
 			"date": request.args.get("date"),
 			"q": request.args.get("q"),
+			"actor": user,
 		}
 
 		include_deleted = request.args.get("include_deleted", "false").lower() == "true"
@@ -38,9 +41,10 @@ class ManagerTaskListResource(Resource):
 	def post(self):
 		payload = request.get_json(silent=True) or {}
 		user = get_current_user()
-		task, error = TaskService.create_task(payload, creator_id=user.id)
+		task, error = TaskService.create_task(payload, creator_id=user.id, actor=user)
 		if error:
-			return {"message": error}, 400
+			status = 403 if "permission" in error.lower() else 400
+			return {"message": error}, status
 		return {"message": "Task created.", "task": serialize_task(task)}, 201
 
 
@@ -53,7 +57,7 @@ class TaskDetailResource(Resource):
 		if task.is_deleted and user.role != "admin":
 			return {"message": "Task not found."}, 404
 
-		if user.role == "staff" and task.assigned_to != user.id:
+		if not TaskService.can_access_task(user, task):
 			return {"message": "Insufficient permissions."}, 403
 
 		return {"task": serialize_task(task)}, 200
@@ -64,16 +68,25 @@ class ManagerTaskMutationResource(Resource):
 
 	def put(self, task_id):
 		task = Task.query.get_or_404(task_id)
+		user = get_current_user()
+		if not TaskService.can_access_task(user, task):
+			return {"message": "Insufficient permissions."}, 403
+
 		payload = request.get_json(silent=True) or {}
-		task, error = TaskService.update_task(task, payload)
+		task, error = TaskService.update_task(task, payload, actor=user)
 		if error:
-			return {"message": error}, 400
+			status = 403 if "permission" in error.lower() else 400
+			return {"message": error}, status
 		return {"message": "Task updated.", "task": serialize_task(task)}, 200
 
 	def delete(self, task_id):
 		from app.extensions import db
 
 		task = Task.query.get_or_404(task_id)
+		user = get_current_user()
+		if not TaskService.can_access_task(user, task):
+			return {"message": "Insufficient permissions."}, 403
+
 		db.session.delete(task)
 		db.session.commit()
 		return {"message": "Task permanently deleted."}, 200
@@ -96,6 +109,7 @@ class StaffAssignedTasksResource(Resource):
 
 	def get(self):
 		user = get_current_user()
+		language = (request.args.get("lang") or "en").strip().lower()
 		page, per_page = parse_pagination_args(
 			request.args,
 			default_page=current_app.config["DEFAULT_PAGE"],
@@ -104,8 +118,34 @@ class StaffAssignedTasksResource(Resource):
 		)
 		query = Task.query.filter(Task.assigned_to == user.id, Task.is_deleted.is_(False)).order_by(Task.created_at.desc())
 		pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+		items = [serialize_task(t) for t in pagination.items]
+		if language != "en":
+			texts = []
+			for item in items:
+				if item.get("title"):
+					texts.append(item["title"])
+				if item.get("category"):
+					texts.append(item["category"])
+				if item.get("description"):
+					texts.append(item["description"])
+
+			translated_map = TranslationService.translate_texts(texts, language)
+			for item in items:
+				item["translated_title"] = translated_map.get(item.get("title") or "", item.get("title") or "")
+				item["translated_category"] = translated_map.get(item.get("category") or "", item.get("category") or "")
+
+				description_text = item.get("description") or ""
+				existing = ""
+				for tr in item.get("translations", []):
+					if tr.get("language") == language and tr.get("translated_text"):
+						existing = tr.get("translated_text")
+						break
+
+				item["description"] = existing or translated_map.get(description_text, description_text)
+
 		return {
-			"items": [serialize_task(t) for t in pagination.items],
+			"items": items,
 			"meta": build_pagination_meta(pagination),
 		}, 200
 
@@ -121,10 +161,12 @@ class StaffTaskStatusResource(Resource):
 
 		task = Task.query.get_or_404(task_id)
 		user = get_current_user()
-		if user.role == "staff" and task.assigned_to != user.id:
+		if not TaskService.can_access_task(user, task):
 			return {"message": "Insufficient permissions."}, 403
 
-		task = TaskService.set_task_status(task, status)
+		task, error = TaskService.set_task_status(task, status, actor=user)
+		if error:
+			return {"message": error}, 403
 		return {"message": "Task status updated.", "task": serialize_task(task)}, 200
 
 
