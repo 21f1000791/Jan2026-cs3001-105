@@ -156,6 +156,7 @@ class TranslationService:
             if key in cache:
                 translated[key] = cache[key]
                 continue
+            print(f"Translating: {key}", flush=True)
 
             value = TranslationService.translate_text(key, target_language)
             cache[key] = value
