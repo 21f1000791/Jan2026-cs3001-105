@@ -12,7 +12,7 @@ const routes = [
   },
   {
     path: "/admin/dashboard",
-    component: () => import("../views/admin/Admin.vue"),
+    component: () => import("../views/admin/AdminDashboard.vue"),
   },
   {
     path: "/manager/analytics",
