@@ -10,7 +10,6 @@ import { authService } from "../../services/authService";
 import { taskService } from "../../services/taskService";
 import { notificationService } from "../../services/notificationService";
 import { userService } from "../../services/userService";
-import { translationService } from "../../services/translationService";
 
 const router = useRouter();
 
@@ -19,30 +18,78 @@ const darkMode = ref(localStorage.getItem("ui_theme") === "dark");
 const notificationOpen = ref(false);
 const notifications = ref([]);
 
-const baseUiText = {
-  myTasks: "My Tasks",
-  translationView: "Translation View",
-  all: "All",
-  pending: "Pending",
-  inProgress: "In Progress",
-  completed: "Completed",
-  english: "English",
-  hindi: "Hindi",
-  kannada: "Kannada",
-  hello: "Hello",
-  subtitleFallback: "Staff workspace with translated task descriptions",
-  profileError: "Could not load user profile.",
-  tasksError: "Could not load tasks.",
-  notificationsError: "Could not load notifications.",
-  statusUpdated: "Task status updated.",
-  statusUpdateError: "Failed to update status.",
-  markReadError: "Could not mark notification as read.",
-  translatingTitle: "Turning words into your language...",
-  translatingSubtitle: "Please hold tight while we localize your workspace.",
+// ==========================================
+// 1. HARDCODED UI TRANSLATION DICTIONARY
+// ==========================================
+const uiTranslations = {
+  en: {
+    myTasks: "My Tasks",
+    translationView: "Translation View",
+    all: "All",
+    pending: "Pending",
+    inProgress: "In Progress",
+    completed: "Completed",
+    english: "English",
+    hindi: "Hindi",
+    kannada: "Kannada",
+    hello: "Hello",
+    subtitleFallback: "Staff workspace with translated task descriptions",
+    profileError: "Could not load user profile.",
+    tasksError: "Could not load tasks.",
+    notificationsError: "Could not load notifications.",
+    statusUpdated: "Task status updated.",
+    statusUpdateError: "Failed to update status.",
+    markReadError: "Could not mark notification as read.",
+    translatingTitle: "Turning words into your language...",
+    translatingSubtitle: "Please hold tight while we localize your workspace.",
+  },
+  hi: {
+    myTasks: "मेरे कार्य",
+    translationView: "अनुवाद दृश्य",
+    all: "सभी",
+    pending: "लंबित",
+    inProgress: "प्रगति पर",
+    completed: "पूर्ण",
+    english: "अंग्रेजी",
+    hindi: "हिंदी",
+    kannada: "कन्नड़",
+    hello: "नमस्ते",
+    subtitleFallback: "अनुवादित कार्य विवरण के साथ कर्मचारी कार्यक्षेत्र",
+    profileError: "उपयोगकर्ता प्रोफ़ाइल लोड नहीं की जा सकी।",
+    tasksError: "कार्य लोड नहीं किए जा सके।",
+    notificationsError: "सूचनाएं लोड नहीं की जा सकीं।",
+    statusUpdated: "कार्य की स्थिति अपडेट की गई।",
+    statusUpdateError: "स्थिति अपडेट करने में विफल।",
+    markReadError: "सूचना को पढ़ा हुआ चिह्नित नहीं किया जा सका।",
+    translatingTitle: "शब्दों को आपकी भाषा में बदल रहे हैं...",
+    translatingSubtitle: "कृपया प्रतीक्षा करें जब तक हम आपके कार्यक्षेत्र का अनुवाद करते हैं।",
+  },
+  kn: {
+    myTasks: "ನನ್ನ ಕಾರ್ಯಗಳು",
+    translationView: "ಅನುವಾದ ನೋಟ",
+    all: "ಎಲ್ಲಾ",
+    pending: "ಬಾಕಿ ಉಳಿದಿದೆ",
+    inProgress: "ಪ್ರಗತಿಯಲ್ಲಿದೆ",
+    completed: "ಪೂರ್ಣಗೊಂಡಿದೆ",
+    english: "ಇಂಗ್ಲಿಷ್",
+    hindi: "ಹಿಂದಿ",
+    kannada: "ಕನ್ನಡ",
+    hello: "ನಮಸ್ಕಾರ",
+    subtitleFallback: "ಅನುವಾದಿತ ಕಾರ್ಯ ವಿವರಣೆಗಳೊಂದಿಗೆ ಸಿಬ್ಬಂದಿ ಕಾರ್ಯಕ್ಷೇತ್ರ",
+    profileError: "ಬಳಕೆದಾರರ ಪ್ರೊಫೈಲ್ ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+    tasksError: "ಕಾರ್ಯಗಳನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+    notificationsError: "ಸೂಚನೆಗಳನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+    statusUpdated: "ಕಾರ್ಯದ ಸ್ಥಿತಿಯನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ.",
+    statusUpdateError: "ಸ್ಥಿತಿಯನ್ನು ನವೀಕರಿಸಲು ವಿಫಲವಾಗಿದೆ.",
+    markReadError: "ಸೂಚನೆಯನ್ನು ಓದಲಾಗಿದೆ ಎಂದು ಗುರುತಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+    translatingTitle: "ಪದಗಳನ್ನು ನಿಮ್ಮ ಭಾಷೆಗೆ ಬದಲಾಯಿಸಲಾಗುತ್ತಿದೆ...",
+    translatingSubtitle: "ನಿಮ್ಮ ಕಾರ್ಯಕ್ಷೇತ್ರವನ್ನು ನಾವು ಸ್ಥಳೀಕರಿಸುವವರೆಗೆ ದಯವಿಟ್ಟು ನಿರೀಕ್ಷಿಸಿ.",
+  }
 };
 
-const uiText = ref({ ...baseUiText });
-const uiTranslationCache = ref({ en: { ...baseUiText } });
+const selectedLanguage = ref("en");
+
+const uiText = computed(() => uiTranslations[selectedLanguage.value] || uiTranslations.en);
 
 const sidebarItems = computed(() => [
   { key: "tasks", label: uiText.value.myTasks },
@@ -53,7 +100,6 @@ const activePanel = ref("tasks");
 const loading = ref(true);
 const isTranslating = ref(false);
 const tasks = ref([]);
-const selectedLanguage = ref("en");
 const selectedFilter = ref("All");
 const translationRequestId = ref(0);
 
@@ -96,7 +142,8 @@ const navbarSubtitle = computed(() => {
 
 const loadCurrentUser = async () => {
   try {
-    currentUser.value = await userService.getMe();
+    const response = await userService.getMe();
+    currentUser.value = response.user ? response.user : response;
   } catch (error) {
     pushToast(uiText.value.profileError, "error");
   }
@@ -110,14 +157,64 @@ const filteredTasks = computed(() => {
   return tasks.value.filter((task) => task.status === normalizedFilter);
 });
 
+// Fetches ALL tasks when the global UI language changes
 const loadTasks = async () => {
   loading.value = true;
   try {
-    tasks.value = await taskService.getAssigned(selectedLanguage.value);
+    const data = await taskService.getAssigned(selectedLanguage.value);
+    const rawTasks = data.items || data;
+    
+    // Explicitly set the activeLang so the TaskCard buttons highlight correctly on initial load
+    tasks.value = rawTasks.map(t => ({
+      ...t,
+      activeLang: selectedLanguage.value 
+    }));
   } catch (error) {
     pushToast(uiText.value.tasksError, "error");
   } finally {
     loading.value = false;
+  }
+};
+
+// FIXED: Bulletproof single task translation
+const translateSingleTask = async (taskId, targetLang) => {
+  try {
+    const token = localStorage.getItem("auth_token") || "";
+    const response = await fetch(`http://127.0.0.1:5000/api/tasks/${taskId}?lang=${targetLang}`, {
+      headers: { 
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      const translatedTask = data.task || data; 
+      
+      const idx = tasks.value.findIndex(t => t.id === taskId);
+      if (idx !== -1) {
+        // 1. Explicitly mutate the properties to guarantee Vue reactivity inside TaskCard
+        const taskRef = tasks.value[idx];
+        
+        // 2. If switching to English, wipe out the translated fields so it falls back to the original text
+        if (targetLang === 'en') {
+          taskRef.translated_title = null;
+          taskRef.translated_description = null;
+          taskRef.translated_category = null;
+        } else {
+          taskRef.translated_title = translatedTask.translated_title;
+          taskRef.translated_description = translatedTask.translated_description;
+          taskRef.translated_category = translatedTask.translated_category;
+        }
+        
+        // 3. Update the activeLang so the TaskCard highlights the button you just clicked
+        taskRef.activeLang = targetLang;
+      }
+    } else {
+      pushToast(uiText.value.tasksError, "error");
+    }
+  } catch (error) {
+    pushToast(uiText.value.tasksError, "error");
   }
 };
 
@@ -154,28 +251,6 @@ const markNotificationRead = async (notificationId) => {
   }
 };
 
-const loadUiTranslations = async () => {
-  const language = selectedLanguage.value;
-  if (language === "en") {
-    uiText.value = { ...baseUiText };
-    return;
-  }
-
-  if (uiTranslationCache.value[language]) {
-    uiText.value = uiTranslationCache.value[language];
-    return;
-  }
-
-  try {
-    const translated = await translationService.translateUI(baseUiText, language);
-    const merged = { ...baseUiText, ...translated };
-    uiTranslationCache.value[language] = merged;
-    uiText.value = merged;
-  } catch (_error) {
-    uiText.value = { ...baseUiText };
-  }
-};
-
 const toggleTheme = () => {
   darkMode.value = !darkMode.value;
   document.documentElement.classList.toggle("dark", darkMode.value);
@@ -183,25 +258,31 @@ const toggleTheme = () => {
 };
 
 const logout = async () => {
-  await authService.logout();
-  router.push("/login");
+  localStorage.removeItem("auth_token");
+  localStorage.removeItem("user_role");
+  try {
+    await authService.logout();
+  } catch(e) {
+    console.warn("Backend logout failed, proceeding locally.");
+  } finally {
+    router.push("/login");
+  }
 };
 
 onMounted(async () => {
   document.documentElement.classList.toggle("dark", darkMode.value);
-  await loadUiTranslations();
   await Promise.all([loadCurrentUser(), loadTasks(), loadNotifications()]);
 });
 
+// Triggers ONLY when the top right global language dropdown is changed
 watch(selectedLanguage, async () => {
   const requestId = Date.now();
   translationRequestId.value = requestId;
   isTranslating.value = true;
 
   try {
-    await loadUiTranslations();
     selectedFilter.value = uiText.value.all;
-    await loadTasks();
+    await loadTasks(); 
   } finally {
     if (translationRequestId.value === requestId) {
       isTranslating.value = false;
@@ -216,6 +297,7 @@ watch(selectedLanguage, async () => {
       <AppNavbar
         :title="navbarTitle"
         :subtitle="navbarSubtitle"
+        :ui-text="uiText"
         :notifications="notifications"
         :notification-open="notificationOpen"
         :dark-mode="darkMode"
@@ -264,7 +346,7 @@ watch(selectedLanguage, async () => {
               :task="task"
               :ui-language="selectedLanguage"
               @status-change="updateTaskStatus(task.id, $event)"
-              @set-language="selectedLanguage = $event"
+              @set-language="translateSingleTask(task.id, $event)" 
             />
           </div>
         </section>
