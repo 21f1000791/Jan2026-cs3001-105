@@ -9,6 +9,8 @@ class Translation(TimestampMixin, db.Model):
     task_id = db.Column(db.Integer, db.ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
     language = db.Column(db.String(20), nullable=False, index=True)
     translated_text = db.Column(db.Text, nullable=False)
+    translated_title = db.Column(db.Text, nullable=False)
+    
 
     task = db.relationship("Task", back_populates="translations")
 
