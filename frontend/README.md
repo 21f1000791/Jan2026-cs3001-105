@@ -55,7 +55,7 @@ App runs at `http://localhost:8080/`.
   - Manager/Admin -> `/manager/*`
   - Staff -> `/staff/*`
 
-## Manager User Management
+## Manager User Manage-ment
 
 In **Manager Dashboard -> User Management**, manager can:
 
