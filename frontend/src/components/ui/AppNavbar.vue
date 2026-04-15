@@ -26,6 +26,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  uiText: {
+    type: Object,
+    default: () => ({}),
+  },
 });
 
 const emit = defineEmits([
@@ -48,13 +52,19 @@ const emit = defineEmits([
         @click="emit('toggle-theme')"
         class="app-navbar__button app-navbar__button--theme"
       >
-        {{ props.darkMode ? "Light" : "Dark" }} Mode
+        {{ props.darkMode ? (props.uiText.lightMode || "Light Mode") : (props.uiText.darkMode || "Dark Mode") }}
       </button>
 
       <NotificationBell
         v-if="props.showNotifications"
         :notifications="props.notifications"
         :open="props.notificationOpen"
+        :labels="{
+          button: props.uiText.notifications || 'Notifications',
+          inbox: props.uiText.inbox || 'Inbox',
+          empty: props.uiText.noUnreadNotifications || 'No unread notifications.',
+          markRead: props.uiText.markAsRead || 'Mark as read'
+        }"
         @toggle="emit('toggle-notifications')"
         @mark-read="emit('mark-notification-read', $event)"
       />
@@ -63,7 +73,7 @@ const emit = defineEmits([
         @click="emit('logout')"
         class="app-navbar__button app-navbar__button--logout"
       >
-        Logout
+        {{ props.uiText.logout || "Logout" }}
       </button>
     </div>
   </header>

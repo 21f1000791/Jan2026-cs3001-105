@@ -1,4 +1,6 @@
 <script setup>
+import { computed } from "vue";
+
 const props = defineProps({
   task: {
     type: Object,
@@ -16,6 +18,63 @@ const props = defineProps({
 
 const emit = defineEmits(["edit", "delete", "status-change", "set-language"]);
 
+const localized = computed(() => {
+  const dictionary = {
+    en: {
+      pending: "Pending",
+      inProgress: "In Progress",
+      completed: "Completed",
+      blocked: "Blocked",
+      overdue: "Overdue",
+      category: "Category",
+      due: "Due",
+      noDescription: "No description",
+    },
+    hi: {
+      pending: "लंबित",
+      inProgress: "प्रगति पर",
+      completed: "पूर्ण",
+      blocked: "अवरुद्ध",
+      overdue: "विलंबित",
+      category: "श्रेणी",
+      due: "नियत तिथि",
+      noDescription: "कोई विवरण नहीं",
+    },
+    kn: {
+      pending: "ಬಾಕಿ",
+      inProgress: "ಪ್ರಗತಿಯಲ್ಲಿದೆ",
+      completed: "ಪೂರ್ಣಗೊಂಡಿದೆ",
+      blocked: "ನಿರ್ಬಂಧಿತ",
+      overdue: "ವಿಳಂಬಿತ",
+      category: "ವರ್ಗ",
+      due: "ಕೊನೆಯ ದಿನಾಂಕ",
+      noDescription: "ವಿವರಣೆ ಇಲ್ಲ",
+    },
+  };
+
+  return dictionary[props.uiLanguage] || dictionary.en;
+});
+
+const statusLabel = computed(() => {
+  const status = props.task.status;
+  if (status === "Pending") {
+    return localized.value.pending;
+  }
+  if (status === "In Progress") {
+    return localized.value.inProgress;
+  }
+  if (status === "Completed") {
+    return localized.value.completed;
+  }
+  if (status === "Blocked") {
+    return localized.value.blocked;
+  }
+  if (status === "Overdue") {
+    return localized.value.overdue;
+  }
+  return status;
+});
+
 const isOverdue = () => {
   return new Date(props.task.dueDate) < new Date() && props.task.status !== "Completed";
 };
@@ -24,7 +83,7 @@ const isOverdue = () => {
 <template>
   <article class="task-card glass-panel">
     <div class="task-card__header">
-      <h3 class="task-card__title">{{ props.task.title }}</h3>
+      <h3 class="task-card__title">{{ props.task.translated_title || props.task.title }}</h3>
       <span
         class="task-card__status"
         :class="{
@@ -33,19 +92,19 @@ const isOverdue = () => {
           'task-card__status--completed': props.task.status === 'Completed',
         }"
       >
-        {{ props.task.status }}
+        {{ statusLabel }}
       </span>
     </div>
 
     <p class="task-card__meta soft-text">
-      <span class="task-card__meta-label">Category:</span> {{ props.task.category }}
+      <span class="task-card__meta-label">{{ localized.category }}:</span> {{ props.task.translated_category || props.task.category }}
       <span class="task-card__meta-sep">|</span>
-      <span class="task-card__meta-label">Due:</span> {{ props.task.dueDate }}
-      <span v-if="isOverdue()" class="task-card__overdue">(Overdue)</span>
+      <span class="task-card__meta-label">{{ localized.due }}:</span> {{ props.task.dueDate || "-" }}
+      <span v-if="isOverdue()" class="task-card__overdue">({{ localized.overdue }})</span>
     </p>
 
     <p class="task-card__description">
-      {{ props.task.description?.[props.uiLanguage] || props.task.description?.en || "No description" }}
+      {{ props.task.description?.[props.uiLanguage] || props.task.description?.en || localized.noDescription }}
     </p>
 
     <div v-if="!props.managerView" class="task-card__lang-controls">
@@ -65,9 +124,9 @@ const isOverdue = () => {
           @change="emit('status-change', $event.target.value)"
           class="task-card__status-select"
         >
-          <option value="Pending">Pending</option>
-          <option value="In Progress">In Progress</option>
-          <option value="Completed">Completed</option>
+          <option value="Pending">{{ localized.pending }}</option>
+          <option value="In Progress">{{ localized.inProgress }}</option>
+          <option value="Completed">{{ localized.completed }}</option>
         </select>
       </template>
     </div>

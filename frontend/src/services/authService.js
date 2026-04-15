@@ -24,6 +24,11 @@ export const authService = {
   async logout() {
     try {
       await apiClient.post("/auth/logout");
+    } catch (error) {
+      // Ignore auth failures during logout because local session teardown should still proceed.
+      if (![401, 422].includes(error?.status)) {
+        throw error;
+      }
     } finally {
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user_role");

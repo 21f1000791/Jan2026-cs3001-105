@@ -21,34 +21,58 @@ const UI_TO_API_STATUS = {
   blocked: "blocked",
 };
 
-const toDescriptionMap = (description) => {
+const toDescriptionMap = (description, translations = []) => {
+  const byLang = Array.isArray(translations)
+    ? translations.reduce((acc, row) => {
+        const lang = row?.language;
+        if (lang && typeof row?.translated_text === "string") {
+          acc[lang] = row.translated_text;
+        }
+        return acc;
+      }, {})
+    : {};
+
   if (!description) {
-    return { en: "", hi: "", kn: "" };
+    return {
+      en: byLang.en || "",
+      hi: byLang.hi || "",
+      kn: byLang.kn || "",
+    };
   }
+
   if (typeof description === "string") {
-    return { en: description, hi: "", kn: "" };
+    return {
+      en: description,
+      hi: byLang.hi || "",
+      kn: byLang.kn || "",
+    };
   }
+
   return {
-    en: description.en || description.english || "",
-    hi: description.hi || description.hindi || "",
-    kn: description.kn || description.kannada || "",
+    en: description.en || description.english || byLang.en || "",
+    hi: description.hi || description.hindi || byLang.hi || "",
+    kn: description.kn || description.kannada || byLang.kn || "",
   };
 };
 
 const normalizeTask = (task = {}) => ({
   id: task.id,
-  title: task.translated_title || task.title || "Untitled",
+  title: task.title || "Untitled",
+  translated_title: task.translated_title || "",
   assignedTo:
     task.assignedTo ||
     task.assigned_to_name ||
     task.assigned_user?.name ||
     task.assigned_to ||
     "Unassigned",
-  category: task.translated_category || task.category || "Maintenance",
+  category: task.category || "Maintenance",
+  translated_category: task.translated_category || "",
   priority: task.priority || "Medium",
   status: API_TO_UI_STATUS[task.status] || task.status || "Pending",
   dueDate: task.dueDate || task.due_date || "",
-  description: toDescriptionMap(task.description || task.translations),
+  description: toDescriptionMap(task.description, task.translations),
+  translated_description: task.translated_description || "",
+  translations: Array.isArray(task.translations) ? task.translations : [],
   createdBy: task.created_by,
 });
 
@@ -87,18 +111,26 @@ export const taskService = {
       params: { lang: language },
     });
     const tasks = response.data?.items || response.data || [];
-    return tasks.map(normalizeTask);
+    return {
+      items: tasks.map(normalizeTask),
+      meta: response.data?.meta || {},
+    };
   },
 
   async create(payload) {
-    const response = await apiClient.post("/tasks", apiPayloadFromTask(payload));
+    const response = await apiClient.post(
+      "/tasks",
+      apiPayloadFromTask(payload),
+      { timeout: 90000 }
+    );
     return normalizeTask(response.data?.task || response.data || payload);
   },
 
   async update(taskId, payload) {
     const response = await apiClient.put(
       `/tasks/${taskId}`,
-      apiPayloadFromTask(payload)
+      apiPayloadFromTask(payload),
+      { timeout: 90000 }
     );
     return normalizeTask(response.data?.task || response.data || { id: taskId, ...payload });
   },

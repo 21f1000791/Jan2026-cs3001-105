@@ -25,6 +25,7 @@ def serialize_translation(translation: Translation):
         "task_id": translation.task_id,
         "language": translation.language,
         "translated_text": translation.translated_text,
+        "translated_title": translation.translated_title,
         "created_at": translation.created_at.isoformat() if translation.created_at else None,
         "updated_at": translation.updated_at.isoformat() if translation.updated_at else None,
     }

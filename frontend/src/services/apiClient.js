@@ -27,13 +27,24 @@ apiClient.interceptors.response.use(
       error?.response?.data?.error ||
       error?.message ||
       "Request failed";
+    const lowerMessage = String(message).toLowerCase();
+    const isAuthTokenIssue =
+      status === 401 ||
+      (status === 422 &&
+        (lowerMessage.includes("token") ||
+          lowerMessage.includes("jwt") ||
+          lowerMessage.includes("signature") ||
+          lowerMessage.includes("subject") ||
+          lowerMessage.includes("not enough segments")));
 
-    if (status === 401) {
+    if (isAuthTokenIssue) {
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user_role");
       window.dispatchEvent(new CustomEvent("cop:auth-expired"));
     }
 
-    return Promise.reject(new Error(message));
+    const wrappedError = new Error(message);
+    wrappedError.status = status;
+    return Promise.reject(wrappedError);
   }
 );

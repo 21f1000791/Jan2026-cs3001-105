@@ -8,6 +8,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  label: {
+    type: String,
+    default: "Workspace",
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "navigate"]);
@@ -23,7 +27,7 @@ const onClickItem = (item) => {
 <template>
   <aside class="app-sidebar glass-panel">
     <p class="app-sidebar__label">
-      Workspace
+      {{ props.label }}
     </p>
     <nav class="app-sidebar__nav">
       <button

@@ -1,17 +1,23 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
+import { Doughnut } from "vue-chartjs";
+import { ArcElement, Chart as ChartJS, Legend, Tooltip } from "chart.js";
 import AppNavbar from "../../components/ui/AppNavbar.vue";
 import AppSidebar from "../../components/ui/AppSidebar.vue";
 import TaskCard from "../../components/tasks/TaskCard.vue";
 import TaskModal from "../../components/tasks/TaskModal.vue";
 import UserModal from "../../components/ui/UserModal.vue";
+import LineAnalyticsChart from "../../components/charts/LineAnalyticsChart.vue";
 import SkeletonCard from "../../components/ui/SkeletonCard.vue";
 import ToastStack from "../../components/ui/ToastStack.vue";
 import { authService } from "../../services/authService";
+import { dashboardService } from "../../services/dashboardService";
 import { taskService } from "../../services/taskService";
 import { userService } from "../../services/userService";
 import { notificationService } from "../../services/notificationService";
+
+ChartJS.register(ArcElement, Legend, Tooltip);
 
 const router = useRouter();
 
@@ -20,19 +26,36 @@ const notifications = ref([]);
 const notificationOpen = ref(false);
 const darkMode = ref(localStorage.getItem("ui_theme") === "dark");
 
-const sidebarItems = [
+const sidebarItems = computed(() => [
   { key: "tasks", label: "Task Management" },
   { key: "users", label: "User Management" },
-  { key: "analytics", label: "Analytics", route: "/manager/analytics" },
-];
+  { key: "analytics", label: "Analytics" },
+]);
 const activePanel = ref("tasks");
 
 const loadingTasks = ref(true);
 const loadingUsers = ref(true);
+const savingTask = ref(false);
+const analyticsLoading = ref(false);
 const tasks = ref([]);
 const taskSearch = ref("");
 const showTaskModal = ref(false);
 const editingTask = ref(null);
+
+const analyticsMetrics = ref({ total: 0, completed: 0, pending: 0, overdue: 0 });
+const analyticsData = ref({
+  monthlyCreated: [],
+  monthlyCompleted: [],
+  statusBreakdown: [],
+  priorityBreakdown: [],
+  categoryBreakdown: [],
+  staffPerformance: [],
+  usersByRole: { admin: 0, manager: 0, staff: 0 },
+  notifications: { total: 0, unread: 0 },
+  translationCoverage: { multilingualTasks: 0, expectedRows: 0, actualRows: 0, coveragePct: 0 },
+  overdueRate: 0,
+  dueSoonTasks: 0,
+});
 
 const users = ref([]);
 const userSearch = ref("");
@@ -93,6 +116,73 @@ const filteredUsers = computed(() => {
     );
   });
 });
+
+const analyticsKpis = computed(() => [
+  { key: "total", label: "Total Tasks", value: analyticsMetrics.value.total },
+  { key: "completed", label: "Completed", value: analyticsMetrics.value.completed },
+  { key: "pending", label: "Pending", value: analyticsMetrics.value.pending },
+  { key: "overdue", label: "Overdue", value: analyticsMetrics.value.overdue },
+  { key: "dueSoon", label: "Due In 3 Days", value: analyticsData.value.dueSoonTasks },
+  { key: "overdueRate", label: "Overdue %", value: `${Number(analyticsData.value.overdueRate || 0).toFixed(1)}%` },
+  {
+    key: "coverage",
+    label: "Translation Coverage",
+    value: `${Number(analyticsData.value.translationCoverage?.coveragePct || 0).toFixed(1)}%`,
+  },
+  { key: "unread", label: "Unread Notifications", value: analyticsData.value.notifications?.unread || 0 },
+]);
+
+const createdTrendPoints = computed(() => analyticsData.value.monthlyCreated || []);
+
+const topCategories = computed(() => (analyticsData.value.categoryBreakdown || []).slice(0, 6));
+
+const topStaff = computed(() => {
+  const rows = [...(analyticsData.value.staffPerformance || [])];
+  rows.sort((a, b) => Number(b.completion_rate || 0) - Number(a.completion_rate || 0));
+  return rows.slice(0, 6);
+});
+
+const usersByRoleRows = computed(() => [
+  { label: "Admin", value: analyticsData.value.usersByRole?.admin || 0 },
+  { label: "Manager", value: analyticsData.value.usersByRole?.manager || 0 },
+  { label: "Staff", value: analyticsData.value.usersByRole?.staff || 0 },
+]);
+
+const statusChartData = computed(() => ({
+  labels: (analyticsData.value.statusBreakdown || []).map((item) => item.label),
+  datasets: [
+    {
+      data: (analyticsData.value.statusBreakdown || []).map((item) => item.value),
+      backgroundColor: ["#10b981", "#0ea5e9", "#6366f1", "#f59e0b", "#ef4444"],
+      borderWidth: 0,
+    },
+  ],
+}));
+
+const usersByRoleChartData = computed(() => ({
+  labels: usersByRoleRows.value.map((row) => row.label),
+  datasets: [
+    {
+      data: usersByRoleRows.value.map((row) => row.value),
+      backgroundColor: ["#7c3aed", "#0284c7", "#16a34a"],
+      borderWidth: 0,
+    },
+  ],
+}));
+
+const donutOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      display: true,
+      position: "bottom",
+      labels: {
+        boxWidth: 12,
+      },
+    },
+  },
+};
 
 const loadTasks = async () => {
   loadingTasks.value = true;
@@ -155,6 +245,19 @@ const loadNotifications = async () => {
   }
 };
 
+const loadAnalytics = async () => {
+  analyticsLoading.value = true;
+  try {
+    const dashboard = await dashboardService.getManagerDashboard();
+    analyticsMetrics.value = dashboard.metrics;
+    analyticsData.value = dashboard.analytics;
+  } catch (error) {
+    pushToast(error.message || "Could not load analytics.", "error");
+  } finally {
+    analyticsLoading.value = false;
+  }
+};
+
 const openCreateTask = () => {
     if (!taskCategoryOptions.value.length) {
       pushToast("No categories are available for your account.", "error");
@@ -170,6 +273,7 @@ const openEditTask = (task) => {
 };
 
 const saveTask = async (payload) => {
+  savingTask.value = true;
   try {
     if (editingTask.value) {
       await taskService.update(editingTask.value.id, payload);
@@ -183,7 +287,16 @@ const saveTask = async (payload) => {
     editingTask.value = null;
     await loadTasks();
   } catch (error) {
-    pushToast(error.message || "Failed to save task.", "error");
+    const message = String(error?.message || "").toLowerCase();
+    const isTimeout = message.includes("timeout") || message.includes("aborted");
+    pushToast(
+      isTimeout
+        ? "Task save is still processing translations. Please wait and refresh tasks in a moment."
+        : (error.message || "Failed to save task."),
+      "error"
+    );
+  } finally {
+    savingTask.value = false;
   }
 };
 
@@ -304,7 +417,7 @@ const logout = async () => {
 onMounted(async () => {
   document.documentElement.classList.toggle("dark", darkMode.value);
   await loadCurrentUser();
-  await Promise.all([loadCategoryCatalog(), loadTasks(), loadUsers(), loadNotifications()]);
+  await Promise.all([loadCategoryCatalog(), loadTasks(), loadUsers(), loadNotifications(), loadAnalytics()]);
   await loadManagerCategoryMatrix();
 });
 </script>
@@ -502,6 +615,66 @@ onMounted(async () => {
               </table>
             </div>
           </div>
+
+          <div v-if="activePanel === 'analytics'" class="manager-panel">
+            <div class="manager-analytics-grid">
+              <div v-for="item in analyticsKpis" :key="item.key" class="manager-analytics-kpi glass-panel">
+                <p class="manager-analytics-kpi__label soft-text">{{ item.label }}</p>
+                <p class="manager-analytics-kpi__value">{{ item.value }}</p>
+              </div>
+            </div>
+
+            <div class="manager-analytics-cards">
+              <div class="manager-analytics-card glass-panel manager-analytics-card--wide">
+                <h2 class="manager-analytics-title">6-Month Task Creation Trend</h2>
+                <LineAnalyticsChart :points="createdTrendPoints" label="Created Tasks" />
+              </div>
+
+              <div class="manager-analytics-card glass-panel">
+                <h2 class="manager-analytics-title">Top Categories</h2>
+                <ul class="manager-analytics-list">
+                  <li v-for="item in topCategories" :key="item.label" class="manager-analytics-list__item">
+                    <span>{{ item.label }}</span>
+                    <strong>{{ item.value }}</strong>
+                  </li>
+                  <li v-if="!topCategories.length" class="manager-analytics-list__item">
+                    <span>No category data yet</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="manager-analytics-card glass-panel">
+                <h2 class="manager-analytics-title">Top Staff Completion</h2>
+                <ul class="manager-analytics-list">
+                  <li v-for="row in topStaff" :key="row.staff_id" class="manager-analytics-list__item">
+                    <span>{{ row.staff_name || `Staff ${row.staff_id}` }}</span>
+                    <strong>{{ Number(row.completion_rate || 0).toFixed(1) }}%</strong>
+                  </li>
+                  <li v-if="!topStaff.length" class="manager-analytics-list__item">
+                    <span>No staff performance data yet</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="manager-analytics-card glass-panel">
+                <h2 class="manager-analytics-title">Task Status Mix</h2>
+                <div class="manager-analytics-donut">
+                  <Doughnut :data="statusChartData" :options="donutOptions" />
+                </div>
+              </div>
+
+              <div class="manager-analytics-card glass-panel">
+                <h2 class="manager-analytics-title">Active Users by Role</h2>
+                <div class="manager-analytics-donut">
+                  <Doughnut :data="usersByRoleChartData" :options="donutOptions" />
+                </div>
+              </div>
+            </div>
+
+            <div v-if="analyticsLoading" class="manager-analytics-loading glass-panel">
+              Loading analytics...
+            </div>
+          </div>
         </section>
       </div>
     </div>
@@ -511,6 +684,7 @@ onMounted(async () => {
       :editing-task="editingTask"
       :users="staffUsers"
       :categories="taskCategoryOptions"
+      :saving="savingTask"
       @close="showTaskModal = false"
       @submit="saveTask"
     />
@@ -726,6 +900,82 @@ onMounted(async () => {
   height: 1rem;
 }
 
+.manager-analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.manager-analytics-kpi {
+  border-radius: 1rem;
+  padding: 0.85rem;
+}
+
+.manager-analytics-kpi__label {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.manager-analytics-kpi__value {
+  margin: 0.25rem 0 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.manager-analytics-cards {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.manager-analytics-card {
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.manager-analytics-card--wide {
+  grid-column: span 1;
+}
+
+.manager-analytics-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.manager-analytics-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.manager-analytics-list__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.68);
+  color: #1e293b;
+}
+
+.manager-analytics-donut {
+  height: 15rem;
+  width: 100%;
+}
+
+.manager-analytics-loading {
+  border-radius: 1rem;
+  padding: 0.85rem;
+  color: #334155;
+}
+
 :global(html.dark) .manager-input {
   background: #334155;
   color: #f1f5f9;
@@ -743,9 +993,27 @@ onMounted(async () => {
   color: #f1f5f9;
 }
 
+:global(html.dark) .manager-analytics-kpi__value,
+:global(html.dark) .manager-analytics-title {
+  color: #f8fafc;
+}
+
+:global(html.dark) .manager-analytics-list__item {
+  background: rgba(30, 41, 59, 0.72);
+  color: #e2e8f0;
+}
+
+:global(html.dark) .manager-analytics-loading {
+  color: #cbd5e1;
+}
+
 @media (min-width: 640px) {
   .manager-task-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .manager-analytics-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -756,6 +1024,14 @@ onMounted(async () => {
 
   .manager-layout {
     flex-direction: row;
+  }
+
+  .manager-analytics-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .manager-analytics-card--wide {
+    grid-column: span 2;
   }
 
   .manager-toolbar {

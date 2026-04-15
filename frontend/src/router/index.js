@@ -14,6 +14,10 @@ const routes = [
     path: "/admin/dashboard",
     component: () => import("../views/admin/AdminDashboard.vue"),
   },
+  // {
+  //   path: "/admin/analytics",
+  //   component: () => import("../views/admin/AdminAnalytics.vue"),
+  // },
   {
     path: "/manager/analytics",
     component: () => import("../views/manager/AnalyticsView.vue"),

@@ -10,6 +10,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  labels: {
+    type: Object,
+    default: () => ({}),
+  },
 });
 
 const emit = defineEmits(["toggle", "mark-read"]);
@@ -23,7 +27,7 @@ const unread = computed(() => props.notifications.filter((n) => !n.is_read));
       @click="emit('toggle')"
       class="notification-bell__trigger"
     >
-      Notifications
+      {{ props.labels.button || "Notifications" }}
       <span class="notification-bell__count">
         {{ unread.length }}
       </span>
@@ -34,8 +38,8 @@ const unread = computed(() => props.notifications.filter((n) => !n.is_read));
         v-if="props.open"
         class="notification-bell__dropdown glass-panel"
       >
-        <h4 class="notification-bell__title">Inbox</h4>
-        <p v-if="unread.length === 0" class="notification-bell__empty soft-text">No unread notifications.</p>
+        <h4 class="notification-bell__title">{{ props.labels.inbox || "Inbox" }}</h4>
+        <p v-if="unread.length === 0" class="notification-bell__empty soft-text">{{ props.labels.empty || "No unread notifications." }}</p>
         <ul v-else class="notification-bell__list">
           <li
             v-for="notification in unread"
@@ -48,7 +52,7 @@ const unread = computed(() => props.notifications.filter((n) => !n.is_read));
               @click="emit('mark-read', notification.notification_id)"
               class="notification-bell__mark"
             >
-              Mark as read
+              {{ props.labels.markRead || "Mark as read" }}
             </button>
           </li>
         </ul>

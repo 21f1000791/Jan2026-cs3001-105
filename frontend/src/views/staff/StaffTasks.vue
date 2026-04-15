@@ -7,6 +7,7 @@ import TaskCard from "../../components/tasks/TaskCard.vue";
 import SkeletonCard from "../../components/ui/SkeletonCard.vue";
 import ToastStack from "../../components/ui/ToastStack.vue";
 import { authService } from "../../services/authService";
+import { dashboardService } from "../../services/dashboardService";
 import { taskService } from "../../services/taskService";
 import { notificationService } from "../../services/notificationService";
 import { userService } from "../../services/userService";
@@ -24,7 +25,12 @@ const notifications = ref([]);
 const uiTranslations = {
   en: {
     myTasks: "My Tasks",
-    translationView: "Translation View",
+    analyticsView: "Analytics View",
+    personalInsights: "Personal Insights",
+    assignedTasks: "Assigned Tasks",
+    overdueTasks: "Overdue Tasks",
+    completionRate: "Completion Rate",
+    analyticsSummary: "Your analytics are based only on tasks assigned to you.",
     all: "All",
     pending: "Pending",
     inProgress: "In Progress",
@@ -33,6 +39,15 @@ const uiTranslations = {
     hindi: "Hindi",
     kannada: "Kannada",
     hello: "Hello",
+    staffRole: "STAFF",
+    darkMode: "Dark Mode",
+    lightMode: "Light Mode",
+    notifications: "Notifications",
+    logout: "Logout",
+    workspace: "Workspace",
+    inbox: "Inbox",
+    noUnreadNotifications: "No unread notifications.",
+    markAsRead: "Mark as read",
     subtitleFallback: "Staff workspace with translated task descriptions",
     profileError: "Could not load user profile.",
     tasksError: "Could not load tasks.",
@@ -45,7 +60,12 @@ const uiTranslations = {
   },
   hi: {
     myTasks: "मेरे कार्य",
-    translationView: "अनुवाद दृश्य",
+    analyticsView: "विश्लेषण दृश्य",
+    personalInsights: "व्यक्तिगत विश्लेषण",
+    assignedTasks: "सौंपे गए कार्य",
+    overdueTasks: "अतिदेय कार्य",
+    completionRate: "पूर्णता दर",
+    analyticsSummary: "आपका विश्लेषण केवल आपको सौंपे गए कार्यों पर आधारित है।",
     all: "सभी",
     pending: "लंबित",
     inProgress: "प्रगति पर",
@@ -54,6 +74,15 @@ const uiTranslations = {
     hindi: "हिंदी",
     kannada: "कन्नड़",
     hello: "नमस्ते",
+    staffRole: "कर्मचारी",
+    darkMode: "डार्क मोड",
+    lightMode: "लाइट मोड",
+    notifications: "सूचनाएं",
+    logout: "लॉगआउट",
+    workspace: "कार्यस्थान",
+    inbox: "इनबॉक्स",
+    noUnreadNotifications: "कोई अपठित सूचना नहीं है।",
+    markAsRead: "पढ़ा हुआ चिह्नित करें",
     subtitleFallback: "अनुवादित कार्य विवरण के साथ कर्मचारी कार्यक्षेत्र",
     profileError: "उपयोगकर्ता प्रोफ़ाइल लोड नहीं की जा सकी।",
     tasksError: "कार्य लोड नहीं किए जा सके।",
@@ -66,7 +95,12 @@ const uiTranslations = {
   },
   kn: {
     myTasks: "ನನ್ನ ಕಾರ್ಯಗಳು",
-    translationView: "ಅನುವಾದ ನೋಟ",
+    analyticsView: "ವಿಶ್ಲೇಷಣೆ ನೋಟ",
+    personalInsights: "ವೈಯಕ್ತಿಕ ವಿಶ್ಲೇಷಣೆ",
+    assignedTasks: "ನಿಮಗೆ ನಿಯೋಜಿಸಿದ ಕಾರ್ಯಗಳು",
+    overdueTasks: "ಮೀರಿದ ಅವಧಿಯ ಕಾರ್ಯಗಳು",
+    completionRate: "ಪೂರ್ಣಗೊಳಿಸುವ ಪ್ರಮಾಣ",
+    analyticsSummary: "ನಿಮ್ಮ ವಿಶ್ಲೇಷಣೆ ನಿಮಗೆ ನಿಯೋಜಿಸಿದ ಕಾರ್ಯಗಳ ಮೇಲೆ ಮಾತ್ರ ಆಧಾರಿತವಾಗಿದೆ.",
     all: "ಎಲ್ಲಾ",
     pending: "ಬಾಕಿ ಉಳಿದಿದೆ",
     inProgress: "ಪ್ರಗತಿಯಲ್ಲಿದೆ",
@@ -75,6 +109,15 @@ const uiTranslations = {
     hindi: "ಹಿಂದಿ",
     kannada: "ಕನ್ನಡ",
     hello: "ನಮಸ್ಕಾರ",
+    staffRole: "ಸಿಬ್ಬಂದಿ",
+    darkMode: "ಡಾರ್ಕ್ ಮೋಡ್",
+    lightMode: "ಲೈಟ್ ಮೋಡ್",
+    notifications: "ಅಧಿಸೂಚನೆಗಳು",
+    logout: "ಲಾಗ್ ಔಟ್",
+    workspace: "ಕಾರ್ಯಸ್ಥಳ",
+    inbox: "ಇನ್‌ಬಾಕ್ಸ್",
+    noUnreadNotifications: "ಓದದ ಅಧಿಸೂಚನೆಗಳಿಲ್ಲ.",
+    markAsRead: "ಓದಲಾಗಿದೆ ಎಂದು ಗುರುತಿಸಿ",
     subtitleFallback: "ಅನುವಾದಿತ ಕಾರ್ಯ ವಿವರಣೆಗಳೊಂದಿಗೆ ಸಿಬ್ಬಂದಿ ಕಾರ್ಯಕ್ಷೇತ್ರ",
     profileError: "ಬಳಕೆದಾರರ ಪ್ರೊಫೈಲ್ ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
     tasksError: "ಕಾರ್ಯಗಳನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
@@ -93,15 +136,24 @@ const uiText = computed(() => uiTranslations[selectedLanguage.value] || uiTransl
 
 const sidebarItems = computed(() => [
   { key: "tasks", label: uiText.value.myTasks },
-  { key: "translation", label: uiText.value.translationView },
+  { key: "analytics", label: uiText.value.analyticsView },
 ]);
 const activePanel = ref("tasks");
 
 const loading = ref(true);
 const isTranslating = ref(false);
 const tasks = ref([]);
+const lastAssignedMeta = ref({});
 const selectedFilter = ref("All");
 const translationRequestId = ref(0);
+const analyticsLoading = ref(false);
+const staffMetrics = ref({
+  assigned: 0,
+  completed: 0,
+  pending: 0,
+  overdue: 0,
+  completionRate: 0,
+});
 
 const toasts = ref([]);
 const pushToast = (message, type = "info") => {
@@ -126,14 +178,39 @@ const statusFilterMap = computed(() => ({
   [uiText.value.completed]: "Completed",
 }));
 
+const translatedDisplayName = computed(() => {
+  const currentName = (currentUser.value.name || "").trim();
+  if (!currentName) {
+    return "";
+  }
+
+  const localizedNames = {
+    hi: {
+      "Staff One": "स्टाफ वन",
+      "Staff Two": "स्टाफ टू",
+      "Manager One": "मैनेजर वन",
+    },
+    kn: {
+      "Staff One": "ಸ್ಟಾಫ್ ಒನ್",
+      "Staff Two": "ಸ್ಟಾಫ್ ಟು",
+      "Manager One": "ಮ್ಯಾನೇಜರ್ ಒನ್",
+    },
+  };
+
+  return localizedNames[selectedLanguage.value]?.[currentName] || currentName;
+});
+
 const navbarTitle = computed(() => {
   return currentUser.value.name
-    ? `${uiText.value.hello} ${currentUser.value.name}`
+    ? `${uiText.value.hello} ${translatedDisplayName.value}`
     : uiText.value.hello;
 });
 
 const navbarSubtitle = computed(() => {
-  const roleLabel = (currentUser.value.role || "staff").toUpperCase();
+  const roleLabel =
+    (currentUser.value.role || "staff").toLowerCase() === "staff"
+      ? uiText.value.staffRole
+      : (currentUser.value.role || "staff").toUpperCase();
   if (currentUser.value.email) {
     return `${roleLabel} • ${currentUser.value.email}`;
   }
@@ -157,11 +234,35 @@ const filteredTasks = computed(() => {
   return tasks.value.filter((task) => task.status === normalizedFilter);
 });
 
+const analyticsCards = computed(() => [
+  { key: "assigned", label: uiText.value.assignedTasks, value: staffMetrics.value.assigned },
+  { key: "completed", label: uiText.value.completed, value: staffMetrics.value.completed },
+  { key: "pending", label: uiText.value.pending, value: staffMetrics.value.pending },
+  { key: "overdue", label: uiText.value.overdueTasks, value: staffMetrics.value.overdue },
+  {
+    key: "completionRate",
+    label: uiText.value.completionRate,
+    value: `${Number(staffMetrics.value.completionRate || 0).toFixed(1)}%`,
+  },
+]);
+
+const completionRatio = computed(() => {
+  const value = Number(staffMetrics.value.completionRate || 0);
+  if (value < 0) {
+    return 0;
+  }
+  if (value > 100) {
+    return 100;
+  }
+  return value;
+});
+
 // Fetches ALL tasks when the global UI language changes
 const loadTasks = async () => {
   loading.value = true;
   try {
     const data = await taskService.getAssigned(selectedLanguage.value);
+    lastAssignedMeta.value = data.meta || {};
     const rawTasks = data.items || data;
     
     // Explicitly set the activeLang so the TaskCard buttons highlight correctly on initial load
@@ -201,10 +302,24 @@ const translateSingleTask = async (taskId, targetLang) => {
           taskRef.translated_title = null;
           taskRef.translated_description = null;
           taskRef.translated_category = null;
+          taskRef.title = translatedTask.title || taskRef.title;
+          taskRef.category = translatedTask.category || taskRef.category;
+          taskRef.description = {
+            en: translatedTask.description || "",
+            hi: "",
+            kn: "",
+          };
         } else {
           taskRef.translated_title = translatedTask.translated_title;
           taskRef.translated_description = translatedTask.translated_description;
           taskRef.translated_category = translatedTask.translated_category;
+          taskRef.title = translatedTask.translated_title || translatedTask.title || taskRef.title;
+          taskRef.category = translatedTask.translated_category || translatedTask.category || taskRef.category;
+          taskRef.description = {
+            en: translatedTask.translated_description || translatedTask.description || "",
+            hi: "",
+            kn: "",
+          };
         }
         
         // 3. Update the activeLang so the TaskCard highlights the button you just clicked
@@ -223,6 +338,24 @@ const loadNotifications = async () => {
     notifications.value = await notificationService.getUnread();
   } catch (error) {
     pushToast(uiText.value.notificationsError, "error");
+  }
+};
+
+const loadStaffAnalytics = async () => {
+  analyticsLoading.value = true;
+  try {
+    const dashboard = await dashboardService.getStaffDashboard();
+    staffMetrics.value = {
+      assigned: Number(dashboard.metrics?.assigned || 0),
+      completed: Number(dashboard.metrics?.completed || 0),
+      pending: Number(dashboard.metrics?.pending || 0),
+      overdue: Number(dashboard.metrics?.overdue || 0),
+      completionRate: Number(dashboard.metrics?.completionRate || 0),
+    };
+  } catch (error) {
+    pushToast(uiText.value.tasksError, "error");
+  } finally {
+    analyticsLoading.value = false;
   }
 };
 
@@ -271,12 +404,13 @@ const logout = async () => {
 
 onMounted(async () => {
   document.documentElement.classList.toggle("dark", darkMode.value);
-  await Promise.all([loadCurrentUser(), loadTasks(), loadNotifications()]);
+  await Promise.all([loadCurrentUser(), loadTasks(), loadNotifications(), loadStaffAnalytics()]);
 });
 
 // Triggers ONLY when the top right global language dropdown is changed
 watch(selectedLanguage, async () => {
   const requestId = Date.now();
+  const requestStart = Date.now();
   translationRequestId.value = requestId;
   isTranslating.value = true;
 
@@ -285,7 +419,21 @@ watch(selectedLanguage, async () => {
     await loadTasks(); 
   } finally {
     if (translationRequestId.value === requestId) {
-      isTranslating.value = false;
+      const usedLiveTranslationApi = Boolean(lastAssignedMeta.value?.translation_api_used);
+
+      if (usedLiveTranslationApi) {
+        // Dynamic duration: hide immediately after API returns when retranslation was needed.
+        isTranslating.value = false;
+      } else {
+        // Cache-only duration: keep overlay for a fixed total of 2 seconds.
+        const elapsed = Date.now() - requestStart;
+        const remaining = Math.max(0, 1000 - elapsed);
+        setTimeout(() => {
+          if (translationRequestId.value === requestId) {
+            isTranslating.value = false;
+          }
+        }, remaining);
+      }
     }
   }
 });
@@ -308,47 +456,83 @@ watch(selectedLanguage, async () => {
       />
 
       <div class="staff-layout">
-        <AppSidebar v-model="activePanel" :items="sidebarItems" />
+        <AppSidebar v-model="activePanel" :items="sidebarItems" :label="uiText.workspace" />
 
         <section class="staff-content">
-          <div class="filters-panel glass-panel">
-            <button
-              v-for="filter in filters"
-              :key="filter"
-              @click="selectedFilter = filter"
-              class="filter-button"
-              :class="selectedFilter === filter
-                ? 'filter-button active'
-                : 'filter-button inactive'"
-            >
-              {{ filter }}
-            </button>
+          <template v-if="activePanel === 'tasks'">
+            <div class="filters-panel glass-panel">
+              <button
+                v-for="filter in filters"
+                :key="filter"
+                @click="selectedFilter = filter"
+                class="filter-button"
+                :class="selectedFilter === filter
+                  ? 'filter-button active'
+                  : 'filter-button inactive'"
+              >
+                {{ filter }}
+              </button>
 
-            <select
-              v-model="selectedLanguage"
-              class="language-select"
-            >
-              <option value="en">{{ uiText.english }}</option>
-              <option value="hi">{{ uiText.hindi }}</option>
-              <option value="kn">{{ uiText.kannada }}</option>
-            </select>
-          </div>
+              <select
+                v-model="selectedLanguage"
+                class="language-select"
+              >
+                <option value="en">{{ uiText.english }}</option>
+                <option value="hi">{{ uiText.hindi }}</option>
+                <option value="kn">{{ uiText.kannada }}</option>
+              </select>
+            </div>
 
-          <div class="tasks-grid">
-            <template v-if="loading">
-              <SkeletonCard v-for="idx in 6" :key="idx" />
-            </template>
+            <div class="tasks-grid">
+              <template v-if="loading">
+                <SkeletonCard v-for="idx in 6" :key="idx" />
+              </template>
 
-            <TaskCard
-              v-for="task in filteredTasks"
-              v-else
-              :key="task.id"
-              :task="task"
-              :ui-language="selectedLanguage"
-              @status-change="updateTaskStatus(task.id, $event)"
-              @set-language="translateSingleTask(task.id, $event)" 
-            />
-          </div>
+              <TaskCard
+                v-for="task in filteredTasks"
+                v-else
+                :key="task.id"
+                :task="task"
+                :ui-language="selectedLanguage"
+                @status-change="updateTaskStatus(task.id, $event)"
+                @set-language="translateSingleTask(task.id, $event)"
+              />
+            </div>
+          </template>
+
+          <template v-else>
+            <div class="staff-analytics-panel">
+              <div class="staff-analytics-summary glass-panel">
+                <h2 class="staff-analytics-title">{{ uiText.personalInsights }}</h2>
+                <p class="staff-analytics-subtitle">{{ uiText.analyticsSummary }}</p>
+              </div>
+
+              <div class="staff-analytics-grid">
+                <div
+                  v-for="item in analyticsCards"
+                  :key="item.key"
+                  class="staff-analytics-card glass-panel"
+                >
+                  <p class="staff-analytics-card__label">{{ item.label }}</p>
+                  <p class="staff-analytics-card__value">{{ item.value }}</p>
+                </div>
+              </div>
+
+              <div class="staff-analytics-progress glass-panel">
+                <div class="staff-analytics-progress__head">
+                  <span>{{ uiText.completionRate }}</span>
+                  <strong>{{ Number(staffMetrics.completionRate || 0).toFixed(1) }}%</strong>
+                </div>
+                <div class="staff-analytics-progress__track">
+                  <div class="staff-analytics-progress__fill" :style="{ width: `${completionRatio}%` }" />
+                </div>
+              </div>
+
+              <div v-if="analyticsLoading" class="staff-analytics-loading glass-panel">
+                Loading analytics...
+              </div>
+            </div>
+          </template>
         </section>
       </div>
     </div>
@@ -450,6 +634,91 @@ watch(selectedLanguage, async () => {
   gap: 1rem;
 }
 
+.staff-analytics-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.staff-analytics-summary {
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.staff-analytics-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.staff-analytics-subtitle {
+  margin: 0.45rem 0 0;
+  color: #334155;
+  font-size: 0.92rem;
+}
+
+.staff-analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.staff-analytics-card {
+  border-radius: 1rem;
+  padding: 0.95rem 1rem;
+}
+
+.staff-analytics-card__label {
+  margin: 0;
+  color: #475569;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.staff-analytics-card__value {
+  margin: 0.3rem 0 0;
+  color: #0f172a;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.staff-analytics-progress {
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.staff-analytics-progress__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #1e293b;
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+}
+
+.staff-analytics-progress__track {
+  height: 0.75rem;
+  width: 100%;
+  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.1);
+  overflow: hidden;
+}
+
+.staff-analytics-progress__fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #22c55e 0%, #3b82f6 100%);
+  transition: width 250ms ease;
+}
+
+.staff-analytics-loading {
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+  color: #334155;
+}
+
 .translate-overlay-fade-enter-active,
 .translate-overlay-fade-leave-active {
   transition: opacity 0.2s ease;
@@ -516,6 +785,22 @@ watch(selectedLanguage, async () => {
   color: #cbd5e1;
 }
 
+:global(html.dark) .staff-analytics-title,
+:global(html.dark) .staff-analytics-card__value,
+:global(html.dark) .staff-analytics-progress__head {
+  color: #f8fafc;
+}
+
+:global(html.dark) .staff-analytics-subtitle,
+:global(html.dark) .staff-analytics-card__label,
+:global(html.dark) .staff-analytics-loading {
+  color: #cbd5e1;
+}
+
+:global(html.dark) .staff-analytics-progress__track {
+  background: rgba(148, 163, 184, 0.22);
+}
+
 @media (min-width: 768px) {
   .staff-page {
     padding: 1.5rem;
@@ -528,6 +813,10 @@ watch(selectedLanguage, async () => {
 
 @media (min-width: 640px) {
   .tasks-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .staff-analytics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

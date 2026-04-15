@@ -58,6 +58,10 @@ SEED_TASKS = [
             "hi": "साप्ताहिक मेट्रिक्स संकलित करें और शुक्रवार तक जमा करें।",
             "kn": "ವಾರಾಂತ್ಯ ಮೆಟ್ರಿಕ್‌ಗಳನ್ನು ಸಂಗ್ರಹಿಸಿ ಶುಕ್ರವಾರದೊಳಗೆ ಸಲ್ಲಿಸಿ.",
         },
+        "translated_titles": {
+            "hi": "साप्ताहिक संचालन रिपोर्ट तैयार करें",
+            "kn": "ವಾರಾಂತ್ಯ ಕಾರ್ಯಾಚರಣೆ ವರದಿಯನ್ನು ಸಿದ್ಧಪಡಿಸಿ",
+        },
     },
     {
         "title": "Verify backup health",
@@ -131,15 +135,23 @@ def upsert_task(item, users_by_email):
         db.session.add(TaskStatusHistory(task_id=task.id, status=task.status, timestamp=utc_now()))
 
     translations = item.get("translations", {})
+    translated_titles = item.get("translated_titles", {})
     for lang in ["hi", "kn"]:
         text_value = (translations.get(lang) or "").strip()
+        title_value = (translated_titles.get(lang) or item["title"] or "").strip()
         existing = Translation.query.filter_by(task_id=task.id, language=lang).first()
         if text_value:
             if existing:
                 existing.translated_text = text_value
+                existing.translated_title = title_value
             else:
                 db.session.add(
-                    Translation(task_id=task.id, language=lang, translated_text=text_value)
+                    Translation(
+                        task_id=task.id,
+                        language=lang,
+                        translated_text=text_value,
+                        translated_title=title_value,
+                    )
                 )
         elif existing:
             db.session.delete(existing)

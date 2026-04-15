@@ -8,7 +8,8 @@ class ManagerDashboardResource(Resource):
 	method_decorators = [role_required("manager", "admin")]
 
 	def get(self):
-		return {"metrics": DashboardService.manager_metrics()}, 200
+		user = get_current_user()
+		return {"metrics": DashboardService.manager_metrics(user=user)}, 200
 
 
 class StaffDashboardResource(Resource):

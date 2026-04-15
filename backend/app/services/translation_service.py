@@ -8,6 +8,22 @@ from flask import current_app
 
 class TranslationService:
     SUPPORTED_LANGUAGES = {"en", "hi", "kn"}
+    CATEGORY_TRANSLATIONS = {
+        "hi": {
+            "Maintenance": "रखरखाव",
+            "Construction": "निर्माण",
+            "Electrical": "विद्युत",
+            "Sanitation": "स्वच्छता",
+            "Landscaping": "भू-दृश्य",
+        },
+        "kn": {
+            "Maintenance": "ನಿರ್ವಹಣೆ",
+            "Construction": "ನಿರ್ಮಾಣ",
+            "Electrical": "ವಿದ್ಯುತ್",
+            "Sanitation": "ಸ್ವಚ್ಛತೆ",
+            "Landscaping": "ಭೂ ಅಲಂಕಾರ",
+        },
+    }
 
     @staticmethod
     def _build_prompt(text: str, language: str):
@@ -31,6 +47,9 @@ class TranslationService:
         # Remove explicit reasoning blocks if model emits them.
         cleaned = re.sub(r"<think>.*?</think>", "", cleaned, flags=re.IGNORECASE | re.DOTALL)
 
+        # Remove unclosed or malformed leading think tags.
+        cleaned = re.sub(r"^\s*<think>\s*", "", cleaned, flags=re.IGNORECASE)
+
         # Remove common assistant labels.
         cleaned = re.sub(
             r"^\s*(translation|translated text|output)\s*[:\-]\s*",
@@ -46,6 +65,30 @@ class TranslationService:
             cleaned = cleaned[1:-1].strip()
 
         return cleaned
+
+    @staticmethod
+    def _is_reasoning_leak(text: str) -> bool:
+        value = (text or "").strip()
+        if not value:
+            return False
+
+        lowered = value.lower()
+        leak_markers = [
+            "<think>",
+            "let's tackle",
+            "first, i need to",
+            "user wants",
+            "translation task",
+            "double-check",
+            "make sure",
+            "putting it together",
+        ]
+        return any(marker in lowered for marker in leak_markers)
+
+    @staticmethod
+    def _extract_last_non_empty_line(text: str) -> str:
+        lines = [line.strip() for line in str(text or "").splitlines() if line.strip()]
+        return lines[-1] if lines else ""
 
     @staticmethod
     def _extract_completion_text(body):
@@ -92,7 +135,16 @@ class TranslationService:
             with urllib.request.urlopen(request, timeout=15) as response:
                 body = json.loads(response.read().decode("utf-8"))
                 raw = TranslationService._extract_completion_text(body)
-                return TranslationService._sanitize_translation_output(raw)
+                cleaned = TranslationService._sanitize_translation_output(raw)
+
+                # If reasoning leaked, attempt to salvage the final line only.
+                if TranslationService._is_reasoning_leak(cleaned):
+                    cleaned = TranslationService._extract_last_non_empty_line(cleaned)
+
+                if TranslationService._is_reasoning_leak(cleaned):
+                    return None
+
+                return cleaned
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
             return None
 
@@ -117,7 +169,7 @@ class TranslationService:
 
         api_key = current_app.config.get("OPENAI_API_KEY", "")
         if not api_key:
-            return f"[{normalized_language}] {text}"
+            return text
 
         payload = {
             "model": "gpt-4o-mini",
@@ -141,11 +193,16 @@ class TranslationService:
         try:
             with urllib.request.urlopen(request, timeout=12) as response:
                 body = json.loads(response.read().decode("utf-8"))
-                return TranslationService._sanitize_translation_output(
+                cleaned = TranslationService._sanitize_translation_output(
                     body["choices"][0]["message"]["content"]
                 )
+                if TranslationService._is_reasoning_leak(cleaned):
+                    cleaned = TranslationService._extract_last_non_empty_line(cleaned)
+                if TranslationService._is_reasoning_leak(cleaned):
+                    return text
+                return cleaned
         except (urllib.error.URLError, KeyError, IndexError, TimeoutError, json.JSONDecodeError):
-            return f"[{normalized_language}] {text}"
+            return text
 
     @staticmethod
     def translate_texts(texts, target_language: str):
@@ -170,6 +227,23 @@ class TranslationService:
         texts = [mapping[key] for key in keys]
         translated = TranslationService.translate_texts(texts, target_language)
         return {key: translated.get(mapping[key], mapping[key]) for key in keys}
+
+    @staticmethod
+    def localize_category(category: str, target_language: str) -> str:
+        value = (category or "").strip()
+        lang = (target_language or "en").strip().lower()
+        if not value or lang == "en":
+            return value
+
+        mapped = TranslationService.CATEGORY_TRANSLATIONS.get(lang, {}).get(value)
+        if mapped:
+            return mapped
+
+        translated = TranslationService.translate_text(value, lang)
+        placeholder = f"[{lang}]"
+        if translated and not translated.strip().startswith(placeholder):
+            return translated
+        return value
 
 
 def translate_text(text: str, target_language: str) -> str:

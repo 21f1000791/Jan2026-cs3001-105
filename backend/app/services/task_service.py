@@ -51,17 +51,32 @@ class TaskService:
         return str(value), {}
 
     @staticmethod
+    def _has_non_empty_translation_values(translations):
+        if not translations:
+            return False
+        return any((translations.get(lang) or "").strip() for lang in ["hi", "kn"])
+
+    @staticmethod
     def _sync_translations(task_id, translations):
+        task = db.session.get(Task, task_id)
+        fallback_title = (task.title if task and task.title else "").strip()
+
         for lang in ["hi", "kn"]:
             text_value = (translations.get(lang) or "").strip()
+            translated_title = translate_text(fallback_title, lang) if fallback_title else ""
             existing = Translation.query.filter_by(task_id=task_id, language=lang).first()
-
             if text_value:
                 if existing:
                     existing.translated_text = text_value
+                    existing.translated_title = translated_title or existing.translated_title or fallback_title
                 else:
                     db.session.add(
-                        Translation(task_id=task_id, language=lang, translated_text=text_value)
+                        Translation(
+                            task_id=task_id,
+                            language=lang,
+                            translated_text=text_value,
+                            translated_title=translated_title or fallback_title,
+                        )
                     )
             elif existing:
                 db.session.delete(existing)
@@ -147,13 +162,17 @@ class TaskService:
         description_text, description_translations = TaskService._normalize_description_payload(
             payload.get("description")
         )
+        has_manual_translations = TaskService._has_non_empty_translation_values(description_translations)
 
         assigned_to = payload.get("assigned_to")
         if assigned_to is not None and db.session.get(User, assigned_to) is None:
             return None, "assigned_to user not found"
 
+        multilingual_flag_provided = "multilingual_enabled" in payload
         multilingual_enabled = bool(payload.get("multilingual_enabled", False))
-        if description_translations.get("hi") or description_translations.get("kn"):
+        if has_manual_translations:
+            multilingual_enabled = True
+        elif description_text and not multilingual_flag_provided:
             multilingual_enabled = True
 
         task = Task(
@@ -173,7 +192,7 @@ class TaskService:
         db.session.add(TaskStatusHistory(task_id=task.id, status=task.status, timestamp=utc_now()))
         NotificationService.notify_task_assignment(task)
 
-        if description_translations:
+        if has_manual_translations:
             TaskService._sync_translations(task.id, description_translations)
         elif task.multilingual_enabled and task.description:
             generated = {
@@ -215,15 +234,17 @@ class TaskService:
             task.status = normalized_status
 
         description_translations = None
+        has_manual_translations = False
         if "description" in payload:
             description_text, description_translations = TaskService._normalize_description_payload(
                 payload.get("description")
             )
             task.description = description_text
+            has_manual_translations = TaskService._has_non_empty_translation_values(description_translations)
 
-            if description_translations and (
-                description_translations.get("hi") or description_translations.get("kn")
-            ):
+            if has_manual_translations:
+                task.multilingual_enabled = True
+            elif description_text and "multilingual_enabled" not in payload:
                 task.multilingual_enabled = True
 
         if "due_date" in payload:
@@ -241,8 +262,14 @@ class TaskService:
         if task.assigned_to != previous_assignee:
             NotificationService.notify_task_assignment(task)
 
-        if description_translations is not None:
+        if has_manual_translations:
             TaskService._sync_translations(task.id, description_translations)
+        elif description_translations is not None and task.multilingual_enabled and task.description:
+            generated = {
+                "hi": translate_text(task.description, "hi"),
+                "kn": translate_text(task.description, "kn"),
+            }
+            TaskService._sync_translations(task.id, generated)
         elif task.multilingual_enabled and task.description and payload.get("regenerate_translations"):
             Translation.query.filter_by(task_id=task.id).delete()
             generated = {

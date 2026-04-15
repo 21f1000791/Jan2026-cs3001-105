@@ -43,8 +43,18 @@ def test_task_relationships_and_translation_unique(app):
         db.session.flush()
 
         history = TaskStatusHistory(task_id=task.id, status="todo")
-        translation_hi = Translation(task_id=task.id, language="hi", translated_text="इन्वेंटरी रिपोर्ट तैयार करें")
-        translation_kn = Translation(task_id=task.id, language="kn", translated_text="ಇನ್‌ವೆಂಟರಿ ವರದಿ ತಯಾರಿಸಿ")
+        translation_hi = Translation(
+            task_id=task.id,
+            language="hi",
+            translated_text="इन्वेंटरी रिपोर्ट तैयार करें",
+            translated_title="इन्वेंटरी रिपोर्ट तैयार करें",
+        )
+        translation_kn = Translation(
+            task_id=task.id,
+            language="kn",
+            translated_text="ಇನ್‌ವೆಂಟರಿ ವರದಿ ತಯಾರಿಸಿ",
+            translated_title="ಇನ್‌ವೆಂಟರಿ ವರದಿ ತಯಾರಿಸಿ",
+        )
         note = Notification(user_id=staff.id, message="A new task was assigned")
 
         db.session.add_all([history, translation_hi, translation_kn, note])

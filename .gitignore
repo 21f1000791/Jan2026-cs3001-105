@@ -6,6 +6,13 @@ backend/venv/
 backend/env/
 backend/instance/
 backend/.env
+backend/app/__pycache__/
+backend/app/config/__pycache__/
+backend/app/constants/__pycache__/
+backend/app/models/__pycache__/
+backend/app/services/__pycache__/
+backend/app/utils/__pycache__/
+backend/tests/__pycache__/
 
 # Frontend (Vue)
 frontend/node_modules/
