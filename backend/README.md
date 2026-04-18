@@ -87,7 +87,7 @@ To utilize the AI features in this platform, you will need to generate API keys 
 
 1. Sarvam AI API Key
 Go to the Sarvam AI Platform.
-dashboard.sarvam.ai
+https://dashboard.sarvam.ai
 
 Create an account or log in with your existing credentials.
 
