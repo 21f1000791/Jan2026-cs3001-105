@@ -16,6 +16,7 @@ import { dashboardService } from "../../services/dashboardService";
 import { taskService } from "../../services/taskService";
 import { userService } from "../../services/userService";
 import { notificationService } from "../../services/notificationService";
+import ChatBot from "../../components/ui/ChatBot.vue";
 
 ChartJS.register(ArcElement, Legend, Tooltip);
 
@@ -437,6 +438,7 @@ onMounted(async () => {
         @logout="logout"
       />
 
+
       <div class="manager-layout">
         <AppSidebar
           v-model="activePanel"
@@ -699,6 +701,7 @@ onMounted(async () => {
     />
 
     <ToastStack :items="toasts" />
+    <ChatBot />
   </div>
 </template>
 

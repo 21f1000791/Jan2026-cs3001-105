@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify
 from flask import Response
 from flask_restful import Api
 
-from . import auth, dashboard, export, notifications, search, tasks, translations, users
+from . import auth, dashboard, export, notifications, search, tasks, translations, users, chat
 
 api_bp = Blueprint("api", __name__)
 api = Api(api_bp)
@@ -68,4 +68,5 @@ def register_api_resources():
     export.register_resources(api)
     users.register_resources(api)
     translations.register_resources(api)
+    chat.register_resources(api)
     _api_resources_registered = True
