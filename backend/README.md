@@ -108,6 +108,8 @@ Click Create API Key, give it a recognizable name (e.g., community-ops-dev), and
 3. Update .env
 Open your .env file and append the following variables, replacing the placeholder text with the actual keys you just copied:
 
-Code snippet
+[In the .env file:]
+
 SARVAM_API_KEY=your_sarvam_api_key_here
+
 GROQ_API_KEY=your_groq_api_key_here
