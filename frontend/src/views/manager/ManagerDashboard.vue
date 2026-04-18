@@ -708,8 +708,10 @@ onMounted(async () => {
 <style scoped>
 .manager-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f12711 0%, #f5af19 100%);
+  /* Deep indigo fading into a muted slate-purple */
+  background: linear-gradient(135deg, #1e1b4b 0%, #2e1065 100%);
   padding: 1rem;
+  transition: background 0.3s ease;
 }
 
 .manager-shell {
@@ -977,6 +979,12 @@ onMounted(async () => {
   border-radius: 1rem;
   padding: 0.85rem;
   color: #334155;
+}
+
+/* --- Dark Mode Integrations --- */
+:global(html.dark) .manager-page {
+  /* Deepen the shadows for Dark Mode */
+  background: linear-gradient(135deg, #0f172a 0%, #170f2e 100%);
 }
 
 :global(html.dark) .manager-input {
