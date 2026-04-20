@@ -5,6 +5,21 @@ info:
   description: |
     REST API for authentication, user management, task operations, notifications,
     dashboards, exports, search, and UI translation.
+
+    BSCS3001 Software Engineering, Project Milestone: 1
+    Team: 21F1000791(Chandra), 22f3001659(Mrunal), 22f3002948(Soham), 24f1000043(Priyangshu)
+
+    User Identification:
+    • Primary: Association Manager (1)
+    • Secondary: Staff (12)
+    • Tertiary: Residents (house owners)
+
+    User Stories:
+    US-01: Manager can create, assign, track tasks
+    US-02: Staff gets multilingual task descriptions
+    US-03: Manager receives overdue alerts
+    US-04: Manager dashboard for performance tracking
+    US-05: Search past tasks
 servers:
   - url: http://127.0.0.1:5000/api
     description: Local development
@@ -19,6 +34,7 @@ tags:
   - name: Search
   - name: Export
   - name: Translation
+  - name: GenAI
 
 paths:
   /health:
@@ -44,6 +60,9 @@ paths:
     post:
       tags: [Auth]
       summary: Register a manager/staff user
+      description: |
+        [User Story: US-00]
+        Allows manager or staff to register into the system.
       requestBody:
         required: true
         content:
@@ -70,6 +89,9 @@ paths:
     post:
       tags: [Auth]
       summary: Login with username or email
+      description: |
+        [User Story: US-00]
+        Authenticates user and returns access token.
       requestBody:
         required: true
         content:
@@ -92,6 +114,9 @@ paths:
     post:
       tags: [Auth]
       summary: Logout current session
+      description: |
+        [User Story: US-00]
+        Allows user to logout
       security:
         - BearerAuth: []
       responses:
@@ -110,6 +135,9 @@ paths:
     get:
       tags: [Users]
       summary: Get current user profile
+      description: |
+        [User Story: Supporting US-01, US-04]
+        Fetches logged-in user profile for role-based task and dashboard access.
       security:
         - BearerAuth: []
       responses:
@@ -131,6 +159,9 @@ paths:
     get:
       tags: [Users]
       summary: List users
+      description: |
+        [User Story: US-03]
+        Allows managers/admins to view users.
       security:
         - BearerAuth: []
       responses:
@@ -152,6 +183,9 @@ paths:
     post:
       tags: [Users]
       summary: Create user (manager/admin restricted)
+      description: |
+        [User Story: US-03]
+        Allows admin to create users.
       security:
         - BearerAuth: []
       requestBody:
@@ -189,6 +223,9 @@ paths:
     put:
       tags: [Users]
       summary: Update user
+      description: |
+        [User Story: Supporting US-01]
+        Allows updating staff details for proper task assignment.
       security:
         - BearerAuth: []
       requestBody:
@@ -263,6 +300,9 @@ paths:
     put:
       tags: [Users]
       summary: Deactivate user
+      description: |
+        [User Story: Supporting US-01]
+        Prevents inactive users from receiving tasks.
       security:
         - BearerAuth: []
       responses:
@@ -288,6 +328,10 @@ paths:
     put:
       tags: [Users]
       summary: Activate user
+      description: |
+        [User Story: Supporting US-01]
+        Reactivates staff for task operations.
+
       security:
         - BearerAuth: []
       responses:
@@ -313,6 +357,9 @@ paths:
     delete:
       tags: [Users]
       summary: Hard delete user (admin only)
+      description: |
+        [User Story: Supporting System Cleanup]
+        Permanently removes users from system.
       security:
         - BearerAuth: []
       responses:
@@ -333,6 +380,9 @@ paths:
     get:
       tags: [Users]
       summary: Get task category catalog and current user allowed categories
+      description: |
+        [User Story: US-01]
+        Provides task categories for structured task creation.
       security:
         - BearerAuth: []
       responses:
@@ -351,6 +401,9 @@ paths:
     get:
       tags: [Users]
       summary: List managers with category matrix (admin only)
+      description: |
+        [User Story: US-01]
+        Shows category assignments across managers.
       security:
         - BearerAuth: []
       responses:
@@ -378,6 +431,9 @@ paths:
     put:
       tags: [Users]
       summary: Assign manager categories (admin only)
+      description: |
+        [User Story: US-01]
+        Assigns categories to managers for task control.
       security:
         - BearerAuth: []
       requestBody:
@@ -415,6 +471,9 @@ paths:
     get:
       tags: [Tasks]
       summary: List tasks for manager/admin scope
+      description: |
+        [User Story: US-01]
+        Retrieves all tasks with filtering options.
       security:
         - BearerAuth: []
       parameters:
@@ -453,6 +512,9 @@ paths:
     post:
       tags: [Tasks]
       summary: Create task (manager/admin)
+      description: |
+        [User Story: US-01]
+        Manager can create and assign tasks.
       security:
         - BearerAuth: []
       requestBody:
@@ -482,6 +544,9 @@ paths:
     get:
       tags: [Tasks]
       summary: Alias of GET /tasks
+      description: |
+        [User Story: US-01]
+        Alias endpoint for retrieving all tasks.
       security:
         - BearerAuth: []
       parameters:
@@ -522,8 +587,18 @@ paths:
     get:
       tags: [Tasks]
       summary: Get task details
+      description: |
+        [User Story: US-01, US-02]
+        Retrieves task details with optional language translation.
       security:
         - BearerAuth: []
+      parameters:                                         
+        - in: query                                       
+          name: lang                                     
+          description: Translate output (en, hi, kn)      
+          schema:                                        
+            type: string                                  
+            enum: [en, hi, kn]
       responses:
         '200':
           description: Task details
@@ -541,6 +616,9 @@ paths:
     put:
       tags: [Tasks]
       summary: Update task
+      description: |
+        [User Story: US-01]
+        Updates task information.
       security:
         - BearerAuth: []
       requestBody:
@@ -570,6 +648,9 @@ paths:
     delete:
       tags: [Tasks]
       summary: Delete task
+      description: |
+        [User Story: US-01]
+        Deletes a task.
       security:
         - BearerAuth: []
       responses:
@@ -608,6 +689,9 @@ paths:
     get:
       tags: [Tasks]
       summary: List tasks assigned to current staff user
+      description: |
+        [User Story: US-01, US-02]
+        Staff views assigned tasks in preferred language.
       security:
         - BearerAuth: []
       parameters:
@@ -633,6 +717,9 @@ paths:
     get:
       tags: [Tasks]
       summary: Alias of GET /tasks/assigned
+      description: |
+        [User Story: US-01, US-02]
+        Staff retrieves assigned tasks in preferred language.
       security:
         - BearerAuth: []
       parameters:
@@ -650,6 +737,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedTasksResponse'
+  /chat:
+    post:
+      tags: [GenAI]
+      summary: NL2SQL AI Data Analyst (Manager/Admin)
+      description: |
+        [User Story: US-04]
+        Enables managers to query system data using natural language for insights and performance monitoring.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  description: The natural language query from the user
+                history:
+                  type: array
+                  description: Optional chat history context
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: AI Response generated via LangChain
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reply:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /tasks/{task_id}/status:
     parameters:
@@ -657,6 +783,9 @@ paths:
     patch:
       tags: [Tasks]
       summary: Update task status
+      description: |
+        [User Story: US-01]
+        Staff updates task progress status.
       security:
         - BearerAuth: []
       requestBody:
@@ -693,6 +822,9 @@ paths:
     get:
       tags: [Notifications]
       summary: List notifications for current user
+      description: |
+        [User Story: US-03]
+        Retrieves alerts including overdue tasks.
       security:
         - BearerAuth: []
       parameters:
@@ -717,6 +849,9 @@ paths:
     get:
       tags: [Notifications]
       summary: List unread notifications for current user
+      description: |
+        [User Story: US-03]
+        Retrieves unread alerts.
       security:
         - BearerAuth: []
       responses:
@@ -765,6 +900,9 @@ paths:
     get:
       tags: [Dashboard]
       summary: Manager/admin dashboard metrics
+      description: |
+        [User Story: US-04]
+        Shows delayed tasks and staff performance metrics.
       security:
         - BearerAuth: []
       responses:
@@ -783,6 +921,9 @@ paths:
     get:
       tags: [Dashboard]
       summary: Staff dashboard metrics
+      description: |
+        [User Story: US-04]
+        Shows individual staff performance.
       security:
         - BearerAuth: []
       responses:
@@ -801,6 +942,9 @@ paths:
     get:
       tags: [Search]
       summary: Search tasks by text query
+      description: |
+        [User Story: US-05]
+        Search tasks by title, description, or category.
       security:
         - BearerAuth: []
       parameters:
@@ -827,6 +971,10 @@ paths:
     get:
       tags: [Export]
       summary: Export tasks as CSV or PDF
+      description: |
+        [User Story: US-05]
+        Allows exporting filtered/search results of tasks for offline analysis.
+
       security:
         - BearerAuth: []
       parameters:
@@ -852,6 +1000,9 @@ paths:
     get:
       tags: [Export]
       summary: Export performance report as CSV
+      description: |
+        [User Story: US-04]
+        Exports staff performance metrics for reporting and evaluation.
       security:
         - BearerAuth: []
       responses:
@@ -866,6 +1017,9 @@ paths:
     post:
       tags: [Translation]
       summary: Translate arbitrary UI text keys for selected language
+      description: |
+        [User Story: US-02]
+        Provides multilingual translation of UI and task-related text for staff understanding.
       security:
         - BearerAuth: []
       requestBody:
